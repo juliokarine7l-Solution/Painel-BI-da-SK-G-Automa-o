@@ -8,7 +8,7 @@ import { GoogleGenAI } from "@google/genai";
 import { TARGET_GOALS, MONTHS, SELLERS, YEARS, HISTORICAL_TOP_CLIENTS, HISTORICAL_YEARS } from './constants';
 import { YearlyActualData, ChartDataPoint, SellerActual } from './types';
 
-// Função utilitária de formatação com conversão garantida para String
+// Função utilitária de formatação com conversão garantida para String (Previne React Error #31)
 const formatBRL = (value: number): string => {
   try {
     const formatted = new Intl.NumberFormat('pt-BR', { 
@@ -29,9 +29,16 @@ const App: React.FC = () => {
     const m = MONTHS[new Date().getMonth()];
     return String(m || 'Jan');
   });
+  
   const [isConsulting, setIsConsulting] = useState<boolean>(false);
   const [dailyReport, setDailyReport] = useState<string | null>(null);
   const [groundingLinks, setGroundingLinks] = useState<{title: string, uri: string}[]>([]);
+
+  // Monitoramento da Chave de API conforme solicitado
+  useEffect(() => {
+    const key = process.env.API_KEY;
+    console.log('Status da Chave:', !!key);
+  }, []);
 
   // Persistência robusta (v10)
   const [actualData, setActualData] = useState<YearlyActualData>(() => {
@@ -169,32 +176,63 @@ const App: React.FC = () => {
   }, [clientProjections]);
 
   const fetchDailyReport = async () => {
-    const env = (window as any).process?.env || {};
-    const apiKey = env.API_KEY || '';
+    const apiKey = process.env.API_KEY;
 
     if (!apiKey) {
-      setDailyReport("Conexão V4: API Key não detectada no ambiente.");
+      setDailyReport("Aguardando Configuração de Ambiente (API Key não detectada).");
       return;
     }
 
     setIsConsulting(true);
+    setDailyReport(null);
+    setGroundingLinks([]);
+
     try {
       const ai = new GoogleGenAI({ apiKey });
-      const prompt = `Consultor V4 SK-G: Faturamento ${selectedYear} em ${metrics.overallPercentage.toFixed(1)}%. Mês ${selectedMonth}. Gere 3 insights industriais imediatos.`;
+      
+      // Construção do Prompt com dados reais dos clientes conforme solicitado
+      const topClientsNames = clientAnalysis.analysis.slice(0, 5).map(c => c.name).join(', ');
+      const prompt = `
+        Atue como Consultor Sênior de Growth da V4 Company para a SK-G Automação Industrial.
+        Contexto Atual:
+        - Ano de Exercício: ${selectedYear}
+        - Mês de Análise: ${selectedMonth}
+        - Atingimento de Meta Geral: ${metrics.overallPercentage.toFixed(1)}%
+        - Volume Faturado: ${formatBRL(metrics.totalRealizadoAcumulado)}
+        - Principais Clientes Estratégicos (T20): ${topClientsNames} (Ex: Fertipar, Maccaferri, CJ do Brasil).
+        
+        Objetivo:
+        Gere 3 insights estratégicos imediatos focados no setor de automação industrial para o ano de 2026. 
+        Use ferramentas de busca para identificar notícias recentes ou tendências que afetem esses clientes específicos.
+        Seja direto, técnico e use terminologia industrial.
+      `;
+
       const response = await ai.models.generateContent({ 
         model: 'gemini-3-flash-preview', 
         contents: prompt, 
-        config: { tools: [{ googleSearch: {} }] } 
+        config: { 
+          tools: [{ googleSearch: {} }],
+          temperature: 0.7
+        } 
       });
-      setDailyReport(String(response.text || "Insights offline."));
+
+      setDailyReport(String(response.text || "Insights indisponíveis no momento."));
+      
       const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
-      setGroundingLinks(chunks.filter((c: any) => c.web).map((c: any) => ({ 
-        title: String(c.web.title || "Link"), 
-        uri: String(c.web.uri || "#") 
-      })));
+      const links = chunks
+        .filter((c: any) => c.web)
+        .map((c: any) => ({ 
+          title: String(c.web.title || "Fonte Industrial"), 
+          uri: String(c.web.uri || "#") 
+        }));
+      setGroundingLinks(links);
+
     } catch (e) { 
-      setDailyReport("Erro na consultoria estratégica industrial."); 
-    } finally { setIsConsulting(false); }
+      console.error("Erro V4 Connection:", e);
+      setDailyReport("Falha na conexão com a consultoria estratégica industrial. Verifique os logs do console."); 
+    } finally { 
+      setIsConsulting(false); 
+    }
   };
 
   const handleInputChange = (month: string, seller: string, value: string) => {
@@ -472,32 +510,51 @@ const App: React.FC = () => {
                  </button>
                </div>
                <div className="p-8">
-                  {dailyReport ? (
+                  {isConsulting ? (
+                    <div className="py-24 text-center">
+                       <div className="w-16 h-16 border-4 border-red-600 border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
+                       <p className="font-black uppercase tracking-widest text-red-500 animate-pulse">Sincronizando com Big Data V4...</p>
+                    </div>
+                  ) : dailyReport ? (
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                      <div className="lg:col-span-2 prose prose-invert max-w-none text-gray-300 bg-black/30 p-8 rounded-3xl border border-white/5">
-                        {String(dailyReport).split('\n').map((line, i) => (
-                          <p key={Number(i)} className="mb-4 leading-relaxed">{String(line)}</p>
+                      <div className="lg:col-span-2 prose prose-invert max-w-none text-gray-300 bg-black/30 p-8 rounded-3xl border border-white/5 shadow-inner">
+                        {String(dailyReport).split('\n').filter(l => l.trim()).map((line, i) => (
+                          <p key={Number(i)} className="mb-4 leading-relaxed font-medium">
+                            {String(line).replace(/^\*+/, '').replace(/\*+$/, '')}
+                          </p>
                         ))}
                       </div>
                       <div className="space-y-6">
                         <div className="bg-gray-950 p-6 rounded-3xl border border-gray-800 shadow-xl">
-                          <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-4 italic">Mercado Industrial</h4>
+                          <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-4 italic">Mercado Industrial 2026</h4>
                           <div className="space-y-3">
                             {groundingLinks.length > 0 ? groundingLinks.map((link, i) => (
-                              <a key={Number(i)} href={String(link.uri)} target="_blank" rel="noreferrer" className="block p-3 bg-white/5 rounded-xl border border-white/5 hover:border-red-600 transition-colors group">
+                              <a key={Number(i)} href={String(link.uri)} target="_blank" rel="noreferrer" className="block p-3 bg-white/5 rounded-xl border border-white/5 hover:border-red-600 transition-all group hover:bg-red-600/5">
                                 <p className="text-[10px] text-gray-400 font-bold truncate group-hover:text-red-400">{String(link.title)}</p>
+                                <p className="text-[8px] text-gray-600 mt-1 uppercase font-black truncate">{String(link.uri)}</p>
                               </a>
-                            )) : <p className="text-[10px] text-gray-600 italic">Sincronize para ver fontes.</p>}
+                            )) : (
+                              <div className="p-4 border border-dashed border-gray-800 rounded-xl text-center">
+                                <p className="text-[9px] text-gray-600 font-black uppercase">Fontes não indexadas nesta consulta.</p>
+                              </div>
+                            )}
                           </div>
+                        </div>
+                        <div className="bg-red-900/10 p-6 rounded-3xl border border-red-500/20">
+                           <h4 className="text-[10px] font-black text-red-400 uppercase tracking-widest mb-2 italic">Ação Sugerida</h4>
+                           <p className="text-xs text-gray-400 font-bold leading-relaxed">
+                             Inicie cadência de prospecção focada em automação sustentável para os clientes listados.
+                           </p>
                         </div>
                       </div>
                     </div>
                   ) : (
                     <div className="py-24 text-center">
-                      <div className="w-20 h-20 bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-6 border border-gray-800">
+                      <div className="w-20 h-20 bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-6 border border-gray-800 shadow-xl">
                         <svg className="w-8 h-8 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                       </div>
-                      <p className="italic text-gray-500 font-black uppercase tracking-widest text-sm">Consultoria de Growth desligada. Clique para iniciar.</p>
+                      <p className="italic text-gray-500 font-black uppercase tracking-widest text-sm">Consultoria de Growth Offline.</p>
+                      <p className="text-[10px] text-gray-700 mt-2 font-black uppercase">Clique em "Atualizar Insights" para conectar.</p>
                     </div>
                   )}
                </div>
