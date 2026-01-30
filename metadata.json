@@ -1,0 +1,5 @@
+{
+  "name": "SK-G Automação - Dashboard de Metas 2026",
+  "description": "BI Dashboard para acompanhamento de metas de vendas 2026, com suporte a múltiplos vendedores (Syllas, V1, V2, V3) e seleção de anos.",
+  "requestFramePermissions": []
+}
