@@ -31,18 +31,23 @@ const App: React.FC = () => {
   });
   
   const [isConsulting, setIsConsulting] = useState<boolean>(false);
-  const [dailyReport, setDailyReport] = useState<string | null>(() => localStorage.getItem('skg_bi_v10_cached_insight'));
+  const [apiError, setApiError] = useState<string | null>(null);
+
+  // Sistema de Cache de Insights (LocalStorage)
+  const [dailyReport, setDailyReport] = useState<string | null>(() => {
+    const cached = localStorage.getItem('skg_bi_v10_cached_insight');
+    return cached ? String(cached) : null;
+  });
   const [groundingLinks, setGroundingLinks] = useState<{title: string, uri: string}[]>(() => {
     try {
-      return JSON.parse(localStorage.getItem('skg_bi_v10_cached_links') || '[]');
+      const saved = localStorage.getItem('skg_bi_v10_cached_links');
+      return saved ? JSON.parse(saved) : [];
     } catch { return []; }
   });
-  const [lastUpdate, setLastUpdate] = useState<string | null>(() => localStorage.getItem('skg_bi_v10_cached_timestamp'));
-
-  // Monitoramento da Chave de API
-  useEffect(() => {
-    console.log('Status da Chave:', !!process.env.API_KEY);
-  }, []);
+  const [lastUpdate, setLastUpdate] = useState<string | null>(() => {
+    const saved = localStorage.getItem('skg_bi_v10_cached_timestamp');
+    return saved ? String(saved) : null;
+  });
 
   // Persistência de Dados de Vendas e Projeções
   const [actualData, setActualData] = useState<YearlyActualData>(() => {
@@ -74,6 +79,7 @@ const App: React.FC = () => {
   });
 
   useEffect(() => {
+    localStorage.setItem('skg_bi_v10_actuals', JSON.stringify(actualData));
     localStorage.setItem('skg_bi_v10_actuals', JSON.stringify(actualData));
     localStorage.setItem('skg_bi_v10_projections', JSON.stringify(clientProjections));
   }, [actualData, clientProjections]);
@@ -144,36 +150,53 @@ const App: React.FC = () => {
     return { analysis, totalRealT20, paretoData };
   }, [clientProjections]);
 
+  // Função para acionamento MANUAL da Análise V4
   const fetchDailyReport = async () => {
     const apiKey = process.env.API_KEY;
-    if (!apiKey) return;
+    if (!apiKey) {
+      setApiError("Chave de API não configurada.");
+      return;
+    }
 
     setIsConsulting(true);
+    setApiError(null);
+
     try {
       const ai = new GoogleGenAI({ apiKey });
-      const topClientsNames = clientAnalysis.analysis.slice(0, 5).map(c => c.name).join(', ');
+      const topClientsNames = clientAnalysis.analysis.slice(0, 5).map(c => String(c.name)).join(', ');
       
       const prompt = `
-        Atue como Consultor Sênior da V4 Company para a SK-G Automação. 
-        Mantenha foco em VO2 e longevidade estratégica.
-        - Ano: ${selectedYear} | Meta Geral: ${metrics.overallPercentage.toFixed(1)}%
-        - Clientes T20 Principais: ${topClientsNames}.
-        - Objetivo: Gere 3 insights de Growth para 2026 baseados em tendências de automação industrial.
+        Atue como Consultor Sênior de Growth da V4 Company para a SK-G Automação Industrial.
+        Foco Invariável: Longevidade Estratégica e VO2 Industrial.
+        Contexto Atual:
+        - Exercício: ${String(selectedYear)}
+        - Mês: ${String(selectedMonth)}
+        - Performance de Meta: ${String(metrics.overallPercentage.toFixed(1))}%
+        - Clientes Estratégicos (T20): ${String(topClientsNames)} (Ex: Maccaferri, Fertipar, Ajinomoto).
+        
+        Objetivo:
+        Gere 3 insights práticos e técnicos para 2026. Use ferramentas de busca para tendências recentes.
+        Entregue um texto direto, sem introduções longas. Foco em resultados.
       `;
 
       const response = await ai.models.generateContent({ 
         model: 'gemini-3-flash-preview', 
         contents: prompt, 
-        config: { tools: [{ googleSearch: {} }], temperature: 0.7 } 
+        config: { 
+          tools: [{ googleSearch: {} }],
+          temperature: 0.7
+        } 
       });
 
       const text = String(response.text || "");
       const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
       const links = chunks.filter((c: any) => c.web).map((c: any) => ({ 
-        title: String(c.web.title || "Fonte"), uri: String(c.web.uri || "#") 
+        title: String(c.web.title || "Fonte Industrial"), 
+        uri: String(c.web.uri || "#") 
       }));
       const timestamp = new Date().toLocaleString('pt-BR');
 
+      // Atualiza Estados e Cache
       setDailyReport(text);
       setGroundingLinks(links);
       setLastUpdate(timestamp);
@@ -184,10 +207,11 @@ const App: React.FC = () => {
 
     } catch (e: any) {
       console.error("Erro API Growth:", e);
+      // Tratamento específico de erro 429
       if (e.message?.includes('429') || e.status === 429) {
-        alert("Limite de requisições atingido. Aguarde 60 segundos para tentar novamente.");
+        setApiError("Sistema em resfriamento. Tente novamente em 1 minuto.");
       } else {
-        alert("Falha na conexão com a consultoria estratégica. Exibindo dados em cache.");
+        setApiError("Erro na conexão com a consultoria estratégica. Exibindo dados de cache.");
       }
     } finally {
       setIsConsulting(false);
@@ -246,10 +270,10 @@ const App: React.FC = () => {
         {activeTab === 'goals' && (
           <div className="animate-in fade-in duration-500 space-y-8">
             <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Card title="Realizado Total" value={formatBRL(metrics.totalRealizadoAcumulado)} subtitle={`Exercício ${selectedYear}`} color="text-emerald-400" />
-              <Card title="Atingimento" value={`${metrics.overallPercentage.toFixed(1)}%`} subtitle="Meta Empresa" color="text-amber-400" />
-              <Card title="Top Vendas Mês" value={metrics.bestSellerMonth.name.split(' ')[0]} subtitle={formatBRL(metrics.bestSellerMonth.realizado)} color="text-blue-400" />
-              <Card title="Gap p/ Meta" value={formatBRL(Math.max(0, metrics.totalMetaAcumulada - metrics.totalRealizadoAcumulado))} subtitle="Volume Faltante" color="text-red-400" />
+              <Card title="Realizado Total" value={String(formatBRL(metrics.totalRealizadoAcumulado))} subtitle={String(`Exercício ${selectedYear}`)} color="text-emerald-400" />
+              <Card title="Atingimento" value={String(`${metrics.overallPercentage.toFixed(1)}%`)} subtitle="Meta Empresa" color="text-amber-400" />
+              <Card title="Top Vendas Mês" value={String(metrics.bestSellerMonth.name.split(' ')[0])} subtitle={String(formatBRL(metrics.bestSellerMonth.realizado))} color="text-blue-400" />
+              <Card title="Gap p/ Meta" value={String(formatBRL(Math.max(0, metrics.totalMetaAcumulada - metrics.totalRealizadoAcumulado)))} subtitle="Volume Faltante" color="text-red-400" />
             </section>
 
             <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -257,7 +281,7 @@ const App: React.FC = () => {
                  <div className="flex justify-between items-center mb-6">
                    <h3 className="text-lg font-black uppercase italic">Meta vs Realizado</h3>
                    <select value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="bg-gray-900 border border-gray-800 rounded-xl px-4 py-1 text-xs font-black text-red-500 outline-none">
-                     {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
+                     {MONTHS.map(m => <option key={m} value={m}>{String(m)}</option>)}
                    </select>
                  </div>
                  <div className="h-[350px] w-full">
@@ -280,8 +304,8 @@ const App: React.FC = () => {
                    {metrics.sellersMonthSummary.map((s) => (
                      <div key={s.id} className="space-y-3 pr-2">
                        <div className="flex justify-between items-end">
-                         <span className="text-[10px] font-black text-gray-500 uppercase">{s.name}</span>
-                         <span className={`text-sm font-black italic ${s.atingimento >= 100 ? 'text-emerald-400' : 'text-red-400'}`}>{s.atingimento.toFixed(1)}%</span>
+                         <span className="text-[10px] font-black text-gray-500 uppercase">{String(s.name)}</span>
+                         <span className={`text-sm font-black italic ${s.atingimento >= 100 ? 'text-emerald-400' : 'text-red-400'}`}>{String(s.atingimento.toFixed(1))}%</span>
                        </div>
                        <div className="h-4 bg-gray-900 rounded-full border border-gray-800 overflow-hidden">
                          <div className={`h-full transition-all duration-1000 ${s.atingimento >= 100 ? 'bg-emerald-500' : s.atingimento >= 80 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${Math.min(100, s.atingimento)}%` }} />
@@ -293,24 +317,23 @@ const App: React.FC = () => {
             </section>
 
             <section className="bg-[#12161f] rounded-3xl border border-gray-800 shadow-2xl overflow-hidden">
-              <div className="p-6 border-b border-gray-800 bg-gray-950/40 text-white"><h3 className="text-lg font-black uppercase italic">Lançamento Direto ({selectedYear})</h3></div>
+              <div className="p-6 border-b border-gray-800 bg-gray-950/40 text-white"><h3 className="text-lg font-black uppercase italic">Lançamento Direto ({String(selectedYear)})</h3></div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm border-collapse">
                   <thead className="bg-[#0b0e14] text-gray-500 text-[10px] uppercase font-black">
                     <tr>
                       <th className="px-6 py-5 sticky left-0 bg-[#0b0e14]">Mês</th>
-                      {SELLERS.map(s => <th key={s.id} className="px-4 py-5 text-center">{s.label}</th>)}
+                      {SELLERS.map(s => <th key={s.id} className="px-4 py-5 text-center">{String(s.label)}</th>)}
                       <th className="px-6 py-5 text-center bg-gray-900/40">Total</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-800/40">
                     {TARGET_GOALS.map((goal) => {
                       const actual = (actualData[selectedYear] || {})[goal.month] || { syllas: 0, v1: 0, v2: 0, v3: 0 };
-                      // Fix: Explicitly type accumulator as number to avoid unknown type error
                       const totalReal = Object.values(actual).reduce((a: number, b) => a + (Number(b) || 0), 0);
                       return (
                         <tr key={goal.month} className="hover:bg-white/[0.01]">
-                          <td className="px-6 py-4 font-black text-gray-400 sticky left-0 bg-[#12161f]">{goal.month}</td>
+                          <td className="px-6 py-4 font-black text-gray-400 sticky left-0 bg-[#12161f]">{String(goal.month)}</td>
                           {SELLERS.map((s) => (
                             <td key={s.id} className="px-2 py-2">
                               <input type="text" className="bg-[#1a1f29] border border-gray-800 rounded-lg px-3 py-3 w-full text-center font-bold text-white outline-none focus:ring-1 focus:ring-emerald-500" placeholder="0,00" 
@@ -318,7 +341,7 @@ const App: React.FC = () => {
                                 onChange={(e) => handleInputChange(goal.month, s.id, e.target.value)} />
                             </td>
                           ))}
-                          <td className="px-6 py-4 text-center font-black text-emerald-400 bg-gray-900/30">{formatBRL(totalReal)}</td>
+                          <td className="px-6 py-4 text-center font-black text-emerald-400 bg-gray-900/30">{String(formatBRL(totalReal))}</td>
                         </tr>
                       );
                     })}
@@ -338,21 +361,20 @@ const App: React.FC = () => {
                   <thead className="bg-[#0b0e14] text-gray-500 font-black uppercase border-b border-gray-800">
                     <tr>
                       <th className="px-4 py-4 min-w-[220px] sticky left-0 bg-[#0b0e14] z-20">Cliente</th>
-                      {HISTORICAL_YEARS.slice(-2).map(y => <th key={y} className="px-3 py-4 text-center">{y}</th>)}
-                      {YEARS.map(y => <th key={y} className="px-3 py-4 text-center bg-red-900/10 text-red-200">{y} (Proj.)</th>)}
+                      {HISTORICAL_YEARS.slice(-2).map(y => <th key={String(y)} className="px-3 py-4 text-center">{String(y)}</th>)}
+                      {YEARS.map(y => <th key={String(y)} className="px-3 py-4 text-center bg-red-900/10 text-red-200">{String(y)} (Proj.)</th>)}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-800/40">
                     {clientAnalysis.analysis.map(client => (
                       <tr key={client.id} className="hover:bg-white/[0.02]">
-                        <td className="px-4 py-3 sticky left-0 bg-[#12161f] font-black text-gray-300 truncate">{client.name}</td>
-                        <td className="px-3 py-3 text-center text-gray-500">{formatBRL(client.v2024)}</td>
-                        <td className="px-3 py-3 text-center text-gray-400 font-bold">{formatBRL(client.v2025)}</td>
+                        <td className="px-4 py-3 sticky left-0 bg-[#12161f] font-black text-gray-300 truncate">{String(client.name)}</td>
+                        <td className="px-3 py-3 text-center text-gray-500">{String(formatBRL(client.v2024))}</td>
+                        <td className="px-3 py-3 text-center text-gray-400 font-bold">{String(formatBRL(client.v2025))}</td>
                         {YEARS.map(y => {
-                          // Fix: Safeguard against unknown/undefined projection values
                           const currentProj = clientProjections[client.id]?.[Number(y)];
                           return (
-                            <td key={y} className="px-2 py-2 bg-red-900/5">
+                            <td key={String(y)} className="px-2 py-2 bg-red-900/5">
                               <input type="text" className="bg-gray-950/30 border border-gray-800/50 rounded px-2 py-1.5 w-full text-center font-black text-red-200 outline-none focus:ring-1 focus:ring-red-500" placeholder="0"
                                 value={currentProj && currentProj > 0 ? currentProj.toLocaleString('pt-BR') : ''}
                                 onChange={e => handleClientValueChange(client.id, Number(y), e.target.value)} />
@@ -371,46 +393,66 @@ const App: React.FC = () => {
         {activeTab === 'growth' && (
           <div className="animate-in fade-in duration-700 space-y-8">
             <div className="bg-[#12161f] border border-gray-800 rounded-3xl shadow-2xl overflow-hidden">
-               <div className="p-6 bg-gradient-to-r from-gray-900 to-black flex justify-between items-center text-white border-b border-gray-800">
+               <div className="p-6 bg-gradient-to-r from-gray-900 to-black flex flex-col md:flex-row justify-between items-center text-white border-b border-gray-800 gap-6">
                  <div className="flex items-center gap-4">
                    <div className="w-14 h-14 rounded-xl flex items-center justify-center bg-white text-red-600 border-2 border-red-600 shadow-xl font-black text-xl italic">V4</div>
                    <div>
                      <h2 className="text-xl font-black uppercase italic leading-none">Consultoria Growth</h2>
-                     {lastUpdate && <p className="text-[9px] font-black opacity-60 uppercase tracking-widest mt-1">Sincronizado em: {lastUpdate}</p>}
+                     {lastUpdate && <p className="text-[9px] font-black opacity-60 uppercase tracking-widest mt-2">Última Análise: {String(lastUpdate)}</p>}
                    </div>
                  </div>
-                 <button onClick={fetchDailyReport} disabled={isConsulting} className="px-6 py-2 bg-red-600 hover:bg-red-500 rounded-xl font-black text-xs uppercase transition-all disabled:opacity-50">
-                   {isConsulting ? 'Consultando...' : 'Atualizar Insights'}
-                 </button>
+                 
+                 <div className="flex flex-col items-end gap-2">
+                    <button 
+                      onClick={fetchDailyReport} 
+                      disabled={isConsulting} 
+                      className="px-10 py-3 bg-red-600 hover:bg-red-500 rounded-xl font-black text-sm uppercase transition-all disabled:opacity-50 shadow-[0_0_20px_rgba(220,38,38,0.4)] active:scale-95"
+                    >
+                      {isConsulting ? 'ANALISANDO...' : 'GERAR ANÁLISE V4'}
+                    </button>
+                    {apiError && <span className="text-[10px] text-red-400 font-black uppercase animate-pulse">{String(apiError)}</span>}
+                 </div>
                </div>
+
                <div className="p-8">
                   {isConsulting ? (
-                    <div className="py-24 text-center">
-                       <div className="w-16 h-16 border-4 border-red-600 border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
-                       <p className="font-black uppercase text-red-500 animate-pulse">Sincronizando com Big Data V4...</p>
+                    <div className="py-32 text-center">
+                       <div className="w-20 h-20 border-4 border-red-600 border-t-transparent rounded-full animate-spin mx-auto mb-8 shadow-[0_0_15px_rgba(220,38,38,0.2)]"></div>
+                       <p className="font-black uppercase text-red-500 animate-pulse tracking-widest">Sincronizando Big Data Industrial V4...</p>
                     </div>
                   ) : dailyReport ? (
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                      <div className="lg:col-span-2 text-gray-300 bg-black/30 p-8 rounded-3xl border border-white/5 whitespace-pre-line leading-relaxed">
-                        {dailyReport}
+                      <div className="lg:col-span-2 text-gray-300 bg-black/40 p-10 rounded-3xl border border-white/5 whitespace-pre-line leading-relaxed text-base font-medium">
+                        {String(dailyReport)}
                       </div>
                       <div className="space-y-6">
                         <div className="bg-gray-950 p-6 rounded-3xl border border-gray-800">
-                          <h4 className="text-[10px] font-black text-gray-500 uppercase mb-4 italic">Fontes de Pesquisa</h4>
-                          <div className="space-y-3">
+                          <h4 className="text-[10px] font-black text-gray-500 uppercase mb-5 italic tracking-widest border-b border-gray-800 pb-2">Fontes de Pesquisa</h4>
+                          <div className="space-y-4">
                             {groundingLinks.length > 0 ? groundingLinks.map((link, i) => (
-                              <a key={i} href={link.uri} target="_blank" rel="noreferrer" className="block p-3 bg-white/5 rounded-xl border border-white/5 hover:border-red-600 transition-all truncate text-[10px] text-gray-400">
-                                {link.title}
+                              /* Fix: Use String() conversion for key to handle case where index 'i' might be inferred as unknown */
+                              <a key={String(i)} href={String(link.uri)} target="_blank" rel="noreferrer" className="block p-4 bg-white/5 rounded-xl border border-white/5 hover:border-red-600 transition-all group">
+                                <p className="text-[10px] text-gray-400 font-bold truncate group-hover:text-red-400">{String(link.title)}</p>
+                                <p className="text-[8px] text-gray-700 mt-1 uppercase font-black truncate">{String(link.uri)}</p>
                               </a>
-                            )) : <p className="text-[9px] text-gray-600 font-black uppercase text-center">Nenhuma fonte recente vinculada.</p>}
+                            )) : <p className="text-[9px] text-gray-700 font-black uppercase text-center py-4">Nenhuma fonte vinculada nesta sessão.</p>}
                           </div>
+                        </div>
+                        <div className="bg-red-900/5 p-6 rounded-3xl border border-red-500/10">
+                           <h4 className="text-[10px] font-black text-red-400 uppercase tracking-widest mb-3 italic">Longevidade VO2</h4>
+                           <p className="text-[11px] text-gray-500 font-bold leading-snug">
+                             A análise atual prioriza a retenção do Top 20 e a expansão de margem em clientes estrela como Fertipar e Maccaferri.
+                           </p>
                         </div>
                       </div>
                     </div>
                   ) : (
-                    <div className="py-24 text-center">
-                      <p className="italic text-gray-500 font-black uppercase tracking-widest">Sem insights em cache.</p>
-                      <p className="text-[10px] text-gray-700 mt-2 font-black uppercase">Clique em "Atualizar Insights" para iniciar a consultoria.</p>
+                    <div className="py-32 text-center border-2 border-dashed border-gray-800 rounded-3xl">
+                      <div className="w-20 h-20 bg-gray-900/50 rounded-full flex items-center justify-center mx-auto mb-6 border border-gray-800">
+                        <svg className="w-10 h-10 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      </div>
+                      <p className="italic text-gray-500 font-black uppercase tracking-widest">Aguardando Acionamento Estratégico.</p>
+                      <p className="text-[10px] text-gray-700 mt-3 font-black uppercase">Clique em "GERAR ANÁLISE V4" para processar os dados.</p>
                     </div>
                   )}
                </div>
@@ -419,10 +461,15 @@ const App: React.FC = () => {
         )}
       </main>
 
-      <footer className="fixed bottom-0 left-0 right-0 bg-[#008f39] p-4 z-50 border-t border-emerald-400/20">
+      <footer className="fixed bottom-0 left-0 right-0 bg-[#008f39] p-4 z-50 border-t border-emerald-400/20 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
         <div className="max-w-[1700px] mx-auto flex justify-between items-center text-white">
-          <div className="text-xs font-bold uppercase">Meta Anual 2026: R$ 2.180.000</div>
-          <div className="text-xl font-black tracking-tighter">{metrics.overallPercentage.toFixed(1)}% de Atingimento</div>
+          <div className="text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+            <span className="w-2 h-2 bg-emerald-300 rounded-full animate-pulse"></span>
+            Meta Anual 2026: R$ 2.180.000
+          </div>
+          <div className="text-xl font-black tracking-tighter flex items-end gap-1">
+            {String(metrics.overallPercentage.toFixed(1))}% <span className="text-[10px] uppercase opacity-60 mb-1">Atingido</span>
+          </div>
         </div>
       </footer>
     </div>
@@ -431,9 +478,10 @@ const App: React.FC = () => {
 
 const Card: React.FC<{title: string; value: string; subtitle: string; color: string;}> = ({ title, value, subtitle, color }) => (
   <div className="bg-[#12161f] border border-gray-800 p-6 rounded-3xl shadow-xl hover:border-red-600/30 transition-all group overflow-hidden relative">
-    <h4 className="text-gray-500 text-[10px] font-black uppercase mb-1 italic opacity-70 leading-none">{title}</h4>
-    <p className={`text-3xl font-black ${color} tracking-tighter leading-tight`}>{value}</p>
-    <p className="text-gray-600 text-[9px] mt-2 font-bold uppercase opacity-70">{subtitle}</p>
+    <div className="absolute top-0 right-0 w-20 h-20 bg-white/5 -mr-10 -mt-10 rounded-full blur-2xl group-hover:bg-red-500/10 transition-all"></div>
+    <h4 className="text-gray-500 text-[10px] font-black uppercase mb-1 italic opacity-70 leading-none tracking-widest">{String(title)}</h4>
+    <p className={`text-3xl font-black ${String(color)} tracking-tighter leading-tight`}>{String(value)}</p>
+    <p className="text-gray-600 text-[9px] mt-2 font-bold uppercase opacity-70">{String(subtitle)}</p>
   </div>
 );
 
