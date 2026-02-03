@@ -16,7 +16,15 @@ export interface SellerActual {
   v3: number;
 }
 
+export interface MonthlyOperational {
+  zm: number;
+  terceiro: number;
+  correios: number;
+  mercadoria: number;
+}
+
 export type YearlyActualData = Record<string, Record<string, SellerActual>>;
+export type YearlyOperationalData = Record<string, Record<string, MonthlyOperational>>;
 
 export interface ChartDataPoint {
   month: string;
