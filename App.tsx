@@ -7,7 +7,7 @@ import {
 import { TARGET_GOALS, MONTHS, SELLERS, YEARS, HISTORICAL_TOP_CLIENTS, HISTORICAL_YEARS } from './constants';
 import { YearlyActualData, SellerActual, YearlyOperationalData, MonthlyOperational } from './types';
 
-// Formatação Segura para evitar React Error #31
+// Formatação Segura para evitar React Error #31 e garantir legibilidade técnica
 const formatBRL = (value: number): string => {
   try {
     return String(new Intl.NumberFormat('pt-BR', { 
@@ -25,7 +25,7 @@ const App: React.FC = () => {
   const [selectedYear, setSelectedYear] = useState<string>('2026');
   const [saveFeedback, setSaveFeedback] = useState<boolean>(false);
   
-  // Persistência - Faturamento
+  // Persistência - Faturamento por Vendedor
   const [actualData, setActualData] = useState<YearlyActualData>(() => {
     const initial: YearlyActualData = {};
     YEARS.forEach(yr => {
@@ -35,13 +35,13 @@ const App: React.FC = () => {
       });
     });
     try {
-      const saved = localStorage.getItem('skg_bi_data_v16');
+      const saved = localStorage.getItem('skg_bi_revenue_v17');
       if (saved) return { ...initial, ...JSON.parse(saved) };
-    } catch (e) { console.warn("Cache error:", e); }
+    } catch (e) { console.warn("Faturamento Cache error:", e); }
     return initial;
   });
 
-  // Persistência - Eficiência Operacional (Logística e Custos)
+  // Persistência - Eficiência Operacional (Logística e Custos de Mercadoria)
   const [opData, setOpData] = useState<YearlyOperationalData>(() => {
     const initial: YearlyOperationalData = {};
     YEARS.forEach(yr => {
@@ -51,13 +51,13 @@ const App: React.FC = () => {
       });
     });
     try {
-      const saved = localStorage.getItem('skg_bi_op_v16');
+      const saved = localStorage.getItem('skg_bi_operational_v17');
       if (saved) return { ...initial, ...JSON.parse(saved) };
     } catch (e) { console.warn("Op Cache error:", e); }
     return initial;
   });
 
-  // Persistência - Projeções T20
+  // Persistência - Projeções T20 (Trienal)
   const [clientProjections, setClientProjections] = useState<Record<string, Record<number, number>>>(() => {
     const initial: Record<string, Record<number, number>> = {};
     HISTORICAL_TOP_CLIENTS.forEach(c => {
@@ -65,26 +65,25 @@ const App: React.FC = () => {
       [2026, 2027, 2028].forEach(y => initial[String(c.id)][Number(y)] = 0);
     });
     try {
-      const saved = localStorage.getItem('skg_bi_projections_v16');
+      const saved = localStorage.getItem('skg_bi_t20_proj_v17');
       if (saved) return { ...initial, ...JSON.parse(saved) };
     } catch (e) { console.warn("Projections cache error:", e); }
     return initial;
   });
 
   const handleSaveData = () => {
-    localStorage.setItem('skg_bi_data_v16', JSON.stringify(actualData));
-    localStorage.setItem('skg_bi_op_v16', JSON.stringify(opData));
-    localStorage.setItem('skg_bi_projections_v16', JSON.stringify(clientProjections));
+    localStorage.setItem('skg_bi_revenue_v17', JSON.stringify(actualData));
+    localStorage.setItem('skg_bi_operational_v17', JSON.stringify(opData));
+    localStorage.setItem('skg_bi_t20_proj_v17', JSON.stringify(clientProjections));
     setSaveFeedback(true);
     setTimeout(() => setSaveFeedback(false), 2000);
   };
 
-  // BI Metrics - Cálculos Unificados
+  // Cálculos de BI e Margem Real (Local)
   const biMetrics = useMemo(() => {
     const currentYearActuals = actualData[selectedYear] || {};
     const currentYearOp = opData[selectedYear] || {};
     let totalRealizado = 0;
-    let totalMeta = 0;
     let totalLogistica = 0;
     let totalMercadoria = 0;
     const metaAnualFixa = 2180000;
@@ -98,12 +97,12 @@ const App: React.FC = () => {
       const mercMes = (Number(op.mercadoria) || 0);
 
       totalRealizado += realMes;
-      totalMeta += goal.total;
       totalLogistica += logMes;
       totalMercadoria += mercMes;
 
       const percLog = realMes > 0 ? (logMes / realMes) * 100 : 0;
-      const margemBrutaMes = realMes - (logMes + mercMes);
+      const percMerc = realMes > 0 ? (mercMes / realMes) * 100 : 0;
+      const margemRealMes = realMes - logMes - mercMes;
 
       return { 
         month: goal.month, 
@@ -111,30 +110,32 @@ const App: React.FC = () => {
         realizado: realMes,
         logistica: logMes,
         mercadoria: mercMes,
-        margem: margemBrutaMes,
+        margem: margemRealMes,
         percLog,
-        isWarning: percLog > 8 // Alerta se logística > 8%
+        percMerc,
+        isWarning: percLog > 10 || percMerc > 50
       };
     });
+
+    const margemAnual = totalRealizado - totalLogistica - totalMercadoria;
+    const atingimento = (totalRealizado / metaAnualFixa) * 100;
 
     return { 
       monthlyData, 
       totalRealizado, 
-      totalMetaAnual: metaAnualFixa, 
-      overallPercentage: (totalRealizado / metaAnualFixa) * 100,
+      overallPercentage: atingimento,
       totalLogistica,
       totalMercadoria,
-      margemBrutaAnual: totalRealizado - (totalLogistica + totalMercadoria),
+      margemBrutaAnual: margemAnual,
+      percMargemAnual: totalRealizado > 0 ? (margemAnual / totalRealizado) * 100 : 0,
       avgLogPerc: totalRealizado > 0 ? (totalLogistica / totalRealizado) * 100 : 0
     };
   }, [actualData, opData, selectedYear]);
 
-  // T20 Analysis - Pareto e Status
+  // Análise T20 e Pareto
   const t20Analysis = useMemo(() => {
     const analysis = HISTORICAL_TOP_CLIENTS.map(client => {
       const lastYear = client.history[2025] || 0;
-      const prevYear = client.history[2024] || 0;
-      
       const proj26 = clientProjections[client.id]?.[2026] || 0;
       const proj27 = clientProjections[client.id]?.[2027] || 0;
       const proj28 = clientProjections[client.id]?.[2028] || 0;
@@ -142,15 +143,15 @@ const App: React.FC = () => {
       const avgHist = HISTORICAL_YEARS.reduce((sum, yr) => sum + (client.history[yr] || 0), 0) / HISTORICAL_YEARS.length;
       
       let status: 'STAR' | 'CHURN' | 'STABLE' | 'DECREASE' = 'STABLE';
-      if (lastYear > avgHist * 1.2) status = 'STAR';
-      else if (lastYear === 0 && prevYear > 0) status = 'CHURN';
-      else if (lastYear < prevYear * 0.7 && lastYear > 0) status = 'DECREASE';
+      if (lastYear > avgHist * 1.15) status = 'STAR';
+      else if (lastYear === 0) status = 'CHURN';
+      else if (lastYear < avgHist * 0.8) status = 'DECREASE';
 
       const trendData = [
-        ...HISTORICAL_YEARS.map(y => ({ year: y, value: client.history[y] || 0, isProjection: false })),
-        { year: 2026, value: proj26, isProjection: true },
-        { year: 2027, value: proj27, isProjection: true },
-        { year: 2028, value: proj28, isProjection: true }
+        ...HISTORICAL_YEARS.map(y => ({ year: y, value: client.history[y] || 0 })),
+        { year: 2026, value: proj26 },
+        { year: 2027, value: proj27 },
+        { year: 2028, value: proj28 }
       ];
 
       return { ...client, lastYear, status, trendData, proj26, proj27, proj28 };
@@ -194,18 +195,16 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0b0e14] text-gray-100 pb-24 font-sans custom-scrollbar">
-      {/* HEADER WIDE */}
+      {/* HEADER CORPORATIVO */}
       <header className="bg-[#cc1d1d] shadow-2xl p-4 flex flex-col md:flex-row items-center justify-between sticky top-0 z-50 gap-4 border-b border-red-800">
         <div className="flex items-center gap-4">
           <img src="https://imgur.com/Ky5zDy2.png" alt="SK-G" className="h-10 bg-white p-1 rounded-md" />
-          <h1 className="text-xl font-black uppercase italic tracking-tighter">SK-G BI Manager</h1>
+          <h1 className="text-xl font-black uppercase italic tracking-tighter">SK-G Intelligence BI</h1>
         </div>
         <nav className="flex bg-red-900/40 p-1 rounded-xl border border-red-500/30 overflow-x-auto">
-          {['goals', 'clients', 'efficiency'].map((tab) => (
-            <button key={tab} onClick={() => setActiveTab(tab as any)} className={`px-5 py-2 rounded-lg text-[10px] font-black uppercase transition-all whitespace-nowrap ${activeTab === tab ? 'bg-white text-red-700 shadow-md' : 'text-white/70 hover:bg-red-700/40'}`}>
-              {tab === 'goals' ? 'Faturamento' : tab === 'clients' ? 'Top 20 Clientes' : 'Eficiência Operacional'}
-            </button>
-          ))}
+          <button onClick={() => setActiveTab('goals')} className={`px-5 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${activeTab === 'goals' ? 'bg-white text-red-700 shadow-md' : 'text-white/70 hover:bg-red-700/40'}`}>Faturamento</button>
+          <button onClick={() => setActiveTab('clients')} className={`px-5 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${activeTab === 'clients' ? 'bg-white text-red-700 shadow-md' : 'text-white/70 hover:bg-red-700/40'}`}>Top 20 Clientes</button>
+          <button onClick={() => setActiveTab('efficiency')} className={`px-5 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${activeTab === 'efficiency' ? 'bg-white text-red-700 shadow-md' : 'text-white/70 hover:bg-red-700/40'}`}>Eficiência Operacional</button>
         </nav>
         <div className="flex items-center gap-2">
           {YEARS.slice(0, 3).map(yr => (
@@ -215,15 +214,15 @@ const App: React.FC = () => {
       </header>
 
       <main className="flex-1 p-4 md:p-8 space-y-8 max-w-[1800px] mx-auto w-full">
-        {/* KPI ROW - 4 COLUMNS */}
+        {/* KPI CARDS - 4 COLUNAS */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="bg-[#12161f] p-6 rounded-3xl border border-gray-800 shadow-xl border-l-4 border-l-emerald-500">
             <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1 italic">Faturamento {String(selectedYear)}</p>
             <p className="text-3xl font-black text-emerald-400">{formatBRL(biMetrics.totalRealizado)}</p>
-            <p className="text-[9px] text-gray-600 mt-2 font-bold uppercase">Realizado no Ano Corrente</p>
+            <p className="text-[9px] text-gray-600 mt-2 font-bold uppercase">Volume Bruto Acumulado</p>
           </div>
           <div className="bg-[#12161f] p-6 rounded-3xl border border-gray-800 shadow-xl border-l-4 border-l-amber-500">
-            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1 italic">Atingimento da Meta</p>
+            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1 italic">Atingimento Meta Anual</p>
             <p className="text-3xl font-black text-amber-400">{String(biMetrics.overallPercentage.toFixed(1))}%</p>
             <div className="h-1.5 w-full bg-gray-900 rounded-full mt-3 overflow-hidden">
               <div className="h-full bg-amber-500" style={{width: `${Math.min(100, biMetrics.overallPercentage)}%`}}></div>
@@ -232,21 +231,20 @@ const App: React.FC = () => {
           <div className="bg-[#12161f] p-6 rounded-3xl border border-gray-800 shadow-xl border-l-4 border-l-red-500">
             <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1 italic">Logística Total</p>
             <p className="text-3xl font-black text-red-400">{formatBRL(biMetrics.totalLogistica)}</p>
-            <p className="text-[9px] text-gray-600 mt-2 font-bold uppercase">Representa {String(biMetrics.avgLogPerc.toFixed(1))}% da Receita</p>
+            <p className="text-[9px] text-gray-600 mt-2 font-bold uppercase">Representa {String(biMetrics.avgLogPerc.toFixed(1))}% do Fat.</p>
           </div>
           <div className="bg-[#12161f] p-6 rounded-3xl border border-gray-800 shadow-xl border-t-4 border-t-blue-600">
-            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1 italic">Margem Bruta (Est.)</p>
+            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1 italic">Margem Bruta Estimada</p>
             <p className="text-3xl font-black text-blue-400">{formatBRL(biMetrics.margemBrutaAnual)}</p>
-            <p className="text-[9px] text-gray-600 mt-2 font-bold uppercase">Após Logística e Mercadoria</p>
+            <p className="text-[9px] text-gray-600 mt-2 font-bold uppercase">Eficiência de {String(biMetrics.percMargemAnual.toFixed(1))}%</p>
           </div>
         </section>
 
         {activeTab === 'goals' && (
           <div className="animate-in fade-in duration-500 space-y-8">
-            {/* GOALS CHARTS */}
             <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               <div className="bg-[#12161f] p-8 rounded-3xl border border-gray-800 shadow-xl">
-                <h3 className="text-lg font-black uppercase italic mb-8 tracking-widest">Faturamento vs Meta Mensal</h3>
+                <h3 className="text-lg font-black uppercase italic mb-8 tracking-widest">Faturamento Realizado x Meta</h3>
                 <div className="h-[350px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={biMetrics.monthlyData}>
@@ -256,13 +254,13 @@ const App: React.FC = () => {
                       <Tooltip contentStyle={{backgroundColor: '#030712', border: 'none', borderRadius: '12px'}} />
                       <Legend />
                       <Bar dataKey="realizado" name="Realizado" fill="#10b981" radius={[4, 4, 0, 0]} barSize={25} />
-                      <Bar dataKey="meta" name="Meta" fill="#1e3a8a" radius={[4, 4, 0, 0]} barSize={10} />
+                      <Bar dataKey="meta" name="Meta Mês" fill="#1e3a8a" radius={[4, 4, 0, 0]} barSize={12} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
               </div>
               <div className="bg-[#12161f] p-8 rounded-3xl border border-gray-800 shadow-xl">
-                <h3 className="text-lg font-black uppercase italic mb-8 tracking-widest">Acumulado do Ano</h3>
+                <h3 className="text-lg font-black uppercase italic mb-8 tracking-widest">Distribuição por Vendedor</h3>
                 <div className="h-[350px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={biMetrics.monthlyData}>
@@ -270,19 +268,19 @@ const App: React.FC = () => {
                       <XAxis dataKey="month" stroke="#4b5563" fontSize={11} />
                       <YAxis stroke="#4b5563" fontSize={10} tickFormatter={v => `R$${v/1000}k`} />
                       <Tooltip contentStyle={{backgroundColor: '#030712', border: 'none', borderRadius: '12px'}} />
-                      <Area type="monotone" dataKey="realizado" name="Volume Mes" fill="#10b981" fillOpacity={0.1} stroke="#10b981" strokeWidth={3} />
+                      <Area type="monotone" dataKey="realizado" name="Volume Total" fill="#10b981" fillOpacity={0.1} stroke="#10b981" strokeWidth={3} />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </div>
               </div>
             </section>
 
-            {/* SALES INPUT */}
+            {/* LANÇAMENTO RECEITA */}
             <section className="bg-[#12161f] rounded-3xl border border-gray-800 shadow-2xl overflow-hidden">
               <div className="p-6 bg-gray-950/50 border-b border-gray-800 flex flex-col sm:flex-row justify-between items-center gap-4">
                 <h3 className="text-lg font-black uppercase italic tracking-widest">Lançamentos de Receita - {String(selectedYear)}</h3>
                 <button onClick={handleSaveData} className={`px-8 py-2 rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-lg active:scale-95 flex items-center gap-2 ${saveFeedback ? 'bg-emerald-600' : 'bg-[#008f39] hover:bg-emerald-500'}`}>
-                  {saveFeedback ? '✓ DADOS SALVOS' : '💾 SALVAR LANÇAMENTOS'}
+                  {saveFeedback ? '✓ SINCRONIZADO' : '💾 SALVAR LANÇAMENTOS'}
                 </button>
               </div>
               <div className="overflow-x-auto">
@@ -291,8 +289,8 @@ const App: React.FC = () => {
                     <tr>
                       <th className="px-6 py-5 sticky left-0 bg-[#0b0e14] z-10 border-r border-gray-800">Mês</th>
                       {SELLERS.map(s => <th key={s.id} className="px-4 py-5 text-center">{String(s.label)}</th>)}
-                      <th className="px-6 py-5 text-center bg-gray-900/40">Realizado Mes</th>
-                      <th className="px-6 py-5 text-center">Meta Mes</th>
+                      <th className="px-6 py-5 text-center bg-gray-900/40">Total Mês</th>
+                      <th className="px-6 py-5 text-center">Meta Fixa</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-800/40">
@@ -322,7 +320,7 @@ const App: React.FC = () => {
           <div className="animate-in slide-in-from-bottom duration-500 space-y-8">
             <section className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <div className="lg:col-span-2 bg-[#12161f] p-8 rounded-3xl border border-gray-800 shadow-xl">
-                <h3 className="text-lg font-black uppercase italic mb-8 tracking-widest text-emerald-400">Impacto Pareto T20 (Base 2025)</h3>
+                <h3 className="text-lg font-black uppercase italic mb-8 tracking-widest text-emerald-400">Curva ABC T20 (Base 2025)</h3>
                 <div className="h-[400px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={t20Analysis.paretoData}>
@@ -355,7 +353,7 @@ const App: React.FC = () => {
 
             <section className="bg-[#12161f] rounded-3xl border border-gray-800 shadow-2xl overflow-hidden">
                <div className="p-8 border-b border-gray-800 bg-gray-950/50 flex flex-col sm:flex-row justify-between items-center gap-4">
-                  <h3 className="text-xl font-black uppercase italic tracking-widest">Base T20 - Projeções Trienais</h3>
+                  <h3 className="text-xl font-black uppercase italic tracking-widest">Base T20 - Planejamento Trienal (2026-2028)</h3>
                   <button onClick={handleSaveData} className="px-8 py-2 rounded-xl bg-[#008f39] hover:bg-emerald-500 font-black text-xs uppercase tracking-widest shadow-lg transition-all">SALVAR PROJEÇÕES</button>
                </div>
                <div className="overflow-x-auto">
@@ -363,8 +361,7 @@ const App: React.FC = () => {
                    <thead className="bg-[#0b0e14] text-gray-500 font-black uppercase border-b border-gray-800">
                      <tr>
                        <th className="px-6 py-4 sticky left-0 bg-[#0b0e14] z-10 border-r border-gray-800">Cliente</th>
-                       <th className="px-6 py-4 text-center">Tendência (Hist. + Proj.)</th>
-                       <th className="px-4 py-4 text-center">Fat. 2024</th>
+                       <th className="px-6 py-4 text-center">Tendência Histórico + Proj.</th>
                        <th className="px-4 py-4 text-center">Fat. 2025</th>
                        <th className="px-4 py-4 text-center bg-red-950/20 text-red-200">Proj. 2026</th>
                        <th className="px-4 py-4 text-center bg-red-900/10 text-red-100">Proj. 2027</th>
@@ -382,7 +379,6 @@ const App: React.FC = () => {
                               </LineChart>
                             </ResponsiveContainer>
                          </td>
-                         <td className="px-4 py-3 text-center text-gray-500">{formatBRL(client.history[2024] || 0)}</td>
                          <td className="px-4 py-3 text-center font-bold text-gray-400">{formatBRL(client.lastYear)}</td>
                          {[2026, 2027, 2028].map(y => (
                             <td key={y} className="px-2 py-2">
@@ -405,7 +401,7 @@ const App: React.FC = () => {
           <div className="animate-in fade-in duration-700 space-y-8">
             <section className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <div className="lg:col-span-2 bg-[#12161f] p-8 rounded-3xl border border-gray-800 shadow-xl">
-                <h3 className="text-lg font-black uppercase italic mb-8 tracking-widest text-red-500">Curva de Custos Logísticos vs Receita</h3>
+                <h3 className="text-lg font-black uppercase italic mb-8 tracking-widest text-red-500">Eficiência Financeira: Receita x Custos Operacionais</h3>
                 <div className="h-[400px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={biMetrics.monthlyData}>
@@ -416,41 +412,44 @@ const App: React.FC = () => {
                       <Tooltip contentStyle={{backgroundColor: '#030712', border: 'none', borderRadius: '12px'}} />
                       <Legend />
                       <Bar yAxisId="left" dataKey="realizado" name="Faturamento" fill="#1e3a8a" radius={[4, 4, 0, 0]} barSize={20} />
-                      <Bar yAxisId="left" dataKey="logistica" name="Custo Logístico" fill="#ef4444" radius={[4, 4, 0, 0]} barSize={12} />
-                      <Line yAxisId="right" type="monotone" dataKey="percLog" name="% de Impacto" stroke="#facc15" strokeWidth={3} dot={{r: 4}} />
+                      <Bar yAxisId="left" dataKey="logistica" name="Logística" fill="#ef4444" radius={[4, 4, 0, 0]} barSize={12} />
+                      <Bar yAxisId="left" dataKey="mercadoria" name="Mercadoria" fill="#a855f7" radius={[4, 4, 0, 0]} barSize={12} />
+                      <Line yAxisId="right" type="monotone" dataKey="percLog" name="% Frete" stroke="#facc15" strokeWidth={3} dot={{r: 4}} />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </div>
               </div>
               <div className="bg-[#12161f] p-8 rounded-3xl border border-gray-800 shadow-xl space-y-8">
-                <div>
-                   <h4 className="text-[11px] font-black text-red-500 uppercase tracking-[0.2em] mb-4 italic">Análise de Margem Mensal</h4>
-                   <div className="space-y-4 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
-                     {biMetrics.monthlyData.map(m => (
-                       <div key={m.month} className={`p-4 rounded-2xl border ${m.isWarning ? 'bg-red-950/20 border-red-500/20' : 'bg-gray-950/40 border-gray-800'}`}>
-                          <div className="flex justify-between items-center mb-1">
-                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest italic">{String(m.month)}</p>
-                            <span className={`text-[9px] font-black px-2 py-0.5 rounded ${m.isWarning ? 'bg-red-600 text-white' : 'bg-emerald-600 text-white'}`}>
-                              {String(m.percLog.toFixed(1))}% FRETE
-                            </span>
-                          </div>
-                          <p className="text-xs text-gray-500 font-bold leading-relaxed">
-                            {m.isWarning 
-                              ? `Atenção: Custo logístico elevado (${String(m.percLog.toFixed(1))}%) em relação à receita. Risco de erosão da margem.`
-                              : `Custo logístico dentro da meta operacional (${String(m.percLog.toFixed(1))}%). Margem de contribuição preservada.`
-                            }
-                          </p>
-                          <p className="text-[10px] font-black text-blue-400 mt-2 uppercase">Margem Bruta Mes: {formatBRL(m.margem)}</p>
-                       </div>
-                     ))}
-                   </div>
+                <h4 className="text-[11px] font-black text-red-500 uppercase tracking-[0.2em] mb-4 italic">Análise de Margem Real</h4>
+                <div className="space-y-4 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
+                  {biMetrics.monthlyData.map(m => (
+                    <div key={m.month} className={`p-4 rounded-2xl border ${m.isWarning ? 'bg-red-950/20 border-red-500/20' : 'bg-gray-950/40 border-gray-800'}`}>
+                      <div className="flex justify-between items-center mb-1">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest italic">{String(m.month)}</p>
+                        <span className={`text-[9px] font-black px-2 py-0.5 rounded ${m.isWarning ? 'bg-red-600 text-white' : 'bg-emerald-600 text-white'}`}>
+                          {String(m.margem >= 0 ? 'MARGEM OK' : 'MARGEM NEGATIVA')}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500 font-bold leading-relaxed mb-2">
+                        {m.isWarning 
+                          ? `Análise: Em ${String(m.month)}, o custo de logística comprometeu ${String(m.percLog.toFixed(1))}% da receita. Alerta de erosão de lucro.`
+                          : `Operação saudável. Custos logísticos e de mercadoria dentro da curva esperada.`
+                        }
+                      </p>
+                      <div className="flex justify-between border-t border-gray-800 pt-2">
+                        <span className="text-[9px] font-black opacity-50 uppercase tracking-widest">Margem Bruta Mês:</span>
+                        <span className="text-[10px] font-black text-blue-400">{formatBRL(m.margem)}</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </section>
 
+            {/* LANÇAMENTO LOGÍSTICA E MERCADORIA */}
             <section className="bg-[#12161f] rounded-3xl border border-gray-800 shadow-2xl overflow-hidden">
                <div className="p-8 border-b border-gray-800 bg-gray-950/50 flex flex-col sm:flex-row justify-between items-center gap-4">
-                  <h3 className="text-lg font-black uppercase italic tracking-widest">Lançamentos Operacionais (ZM, Terc, Correios, Mercadoria)</h3>
+                  <h3 className="text-lg font-black uppercase italic tracking-widest">Gestão de Custos: Logística (ZM, Terc, Correios) e Matéria-Prima</h3>
                   <button onClick={handleSaveData} className="px-10 py-2.5 rounded-xl bg-[#008f39] hover:bg-emerald-500 font-black text-xs uppercase tracking-widest transition-all shadow-lg active:scale-95">
                     💾 SALVAR DADOS OPERACIONAIS
                   </button>
@@ -463,7 +462,7 @@ const App: React.FC = () => {
                         <th className="px-4 py-5 text-center">ZM Express</th>
                         <th className="px-4 py-5 text-center">Terc. Express</th>
                         <th className="px-4 py-5 text-center text-amber-400">Correios</th>
-                        <th className="px-4 py-5 text-center bg-gray-900/40">Custo Mercadoria</th>
+                        <th className="px-4 py-5 text-center bg-gray-900/40">Custo Matéria-Prima</th>
                         <th className="px-6 py-5 text-center font-black">Impacto Log. %</th>
                       </tr>
                     </thead>
@@ -499,15 +498,16 @@ const App: React.FC = () => {
         )}
       </main>
 
+      {/* FOOTER FINANCEIRO */}
       <footer className="fixed bottom-0 left-0 right-0 bg-[#008f39] p-4 z-50 border-t border-emerald-400/20 shadow-[0_-10px_40px_rgba(0,0,0,0.6)] backdrop-blur-md">
         <div className="max-w-[1800px] mx-auto flex flex-col md:flex-row justify-between items-center text-white gap-2">
           <div className="flex items-center gap-3">
              <div className="w-2 h-2 bg-white rounded-full animate-pulse shadow-glow"></div>
-             <span className="text-xs font-black uppercase tracking-widest italic">SK-G BI v16.0 | Versão Definitiva de Gestão | Meta: {formatBRL(2180000)}</span>
+             <span className="text-xs font-black uppercase tracking-widest italic">SK-G BI v17.0 | Foco em Eficiência Industrial | Meta Meta: {formatBRL(2180000)}</span>
           </div>
           <div className="flex gap-10 items-center">
              <div className="text-right">
-                <p className="text-[9px] font-black uppercase opacity-60 italic">Receita Líquida Estimada</p>
+                <p className="text-[9px] font-black uppercase opacity-60 italic">Margem Bruta Ano</p>
                 <p className="text-xl font-black">{formatBRL(biMetrics.margemBrutaAnual)}</p>
              </div>
              <div className="w-px h-8 bg-white/20"></div>
