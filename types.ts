@@ -14,6 +14,8 @@ export interface SellerActual {
   v1: number;
   v2: number;
   v3: number;
+  // Permite acesso dinâmico via ID do vendedor (syllas, v1, etc.)
+  [key: string]: number;
 }
 
 export interface MonthlyOperational {
@@ -21,6 +23,8 @@ export interface MonthlyOperational {
   terceiro: number;
   correios: number;
   mercadoria: number;
+  // Permite acesso dinâmico aos campos operacionais
+  [key: string]: number;
 }
 
 export type YearlyActualData = Record<string, Record<string, SellerActual>>;
@@ -49,5 +53,6 @@ export interface ClientYearData {
 export interface TopClient {
   id: string;
   name: string;
-  history: Record<number, number>; // year: value
+  // Correção: Permitir chaves como 'aggregate' (string) para compatibilidade com constants.ts
+  history: Record<string | number, number>;
 }
