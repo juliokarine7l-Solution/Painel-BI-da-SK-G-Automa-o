@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, 
-  ComposedChart, Line, Area, Cell
+  ComposedChart, Line, Area, Cell, AreaChart
 } from 'recharts';
 import { TARGET_GOALS, MONTHS, SELLERS, YEARS, HISTORICAL_TOP_CLIENTS, INDIVIDUAL_METAS } from './constants';
 import { YearlyActualData, SellerActual, YearlyOperationalData, MonthlyOperational } from './types';
@@ -26,12 +26,37 @@ interface SKGDatabase {
   t20Projections: Record<string, Record<number, number>>; // ClientID -> Year -> Value
 }
 
+// Mapeamento Geográfico Real - Foco Estado de São Paulo
+const CLIENT_CITY_DATA: Record<string, { x: number, y: number, city: string }> = {
+  c1: { x: 410, y: 360, city: 'Campo Limpo Paulista' },
+  c2: { x: 400, y: 350, city: 'Jundiaí' },
+  c3: { x: 390, y: 345, city: 'Itupeva' },
+  c4: { x: 375, y: 325, city: 'Hortolândia' },
+  c5: { x: 360, y: 340, city: 'Indaiatuba' },
+  c6: { x: 320, y: 300, city: 'Piracicaba' },
+  c7: { x: 150, y: 200, city: 'Penápolis' },
+  c8: { x: 380, y: 320, city: 'Campinas' },
+  c9: { x: 100, y: 180, city: 'Valparaíso' },
+  c10: { x: 385, y: 330, city: 'Valinhos' },
+  c11: { x: 355, y: 335, city: 'Elias Fausto' },
+  c12: { x: 420, y: 340, city: 'Itatiba' },
+  c13: { x: 360, y: 340, city: 'Indaiatuba' },
+  c14: { x: 390, y: 345, city: 'Itupeva' },
+  c15: { x: 360, y: 380, city: 'Sorocaba' },
+  c16: { x: 405, y: 355, city: 'Várzea Paulista' },
+  c17: { x: 400, y: 350, city: 'Jundiaí' },
+  c18: { x: 400, y: 350, city: 'Jundiaí' },
+  c19: { x: 380, y: 320, city: 'Campinas' },
+  c20: { x: 450, y: 410, city: 'S. B. do Campo' },
+  c21: { x: 365, y: 310, city: 'Cosmópolis' },
+};
+
 const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'goals' | 'performance' | 't20' | 'efficiency'>('goals');
+  const [activeTab, setActiveTab] = useState<'goals' | 'performance' | 't20' | 'efficiency' | 'geo'>('goals');
   const [selectedYear, setSelectedYear] = useState<string>('2026');
   const [saveFeedback, setSaveFeedback] = useState<boolean>(false);
 
-  // Database Engine - Persistência Total SK-G (2026-2028)
+  // Database Engine - Persistência Total SK-G (2026-2030)
   const [db, setDb] = useState<SKGDatabase>(() => {
     const initialRevenue: YearlyActualData = {};
     const initialOp: YearlyOperationalData = {};
@@ -47,11 +72,11 @@ const App: React.FC = () => {
     });
 
     HISTORICAL_TOP_CLIENTS.forEach(c => {
-      initialT20[String(c.id)] = { 2026: 0, 2027: 0, 2028: 0 };
+      initialT20[String(c.id)] = { 2026: 0, 2027: 0, 2028: 0, 2029: 0, 2030: 0 };
     });
 
     try {
-      const saved = localStorage.getItem('SKG_BI_INDUSTRIAL_V24_SECURE');
+      const saved = localStorage.getItem('SKG_BI_V26_ULTIMATE_SP');
       if (saved) {
         const parsed = JSON.parse(saved);
         return {
@@ -60,17 +85,17 @@ const App: React.FC = () => {
           t20Projections: { ...initialT20, ...parsed.t20Projections }
         };
       }
-    } catch (e) { console.warn("Database sync fail:", e); }
+    } catch (e) { console.warn("Database sync error:", e); }
     return { revenue: initialRevenue, operational: initialOp, t20Projections: initialT20 };
   });
 
   const handleGlobalSave = () => {
-    localStorage.setItem('SKG_BI_INDUSTRIAL_V24_SECURE', JSON.stringify(db));
+    localStorage.setItem('SKG_BI_V26_ULTIMATE_SP', JSON.stringify(db));
     setSaveFeedback(true);
     setTimeout(() => setSaveFeedback(false), 2000);
   };
 
-  // BI Metrics - Consolidação Industrial (Faturamento, Metas e Custos Operacionais)
+  // BI Metrics - Consolidação Industrial Portfólio Global
   const biMetrics = useMemo(() => {
     const currentYearRevenue = db.revenue[selectedYear] || {};
     const currentYearOp = db.operational[selectedYear] || {};
@@ -123,12 +148,11 @@ const App: React.FC = () => {
     };
   }, [db, selectedYear]);
 
-  // Gestão T20 - Análise Histórica vs Projeção
+  // Gestão T20 - Comportamento Fluido (2021-2028)
   const t20Analysis = useMemo(() => {
     const analysis = HISTORICAL_TOP_CLIENTS.map(client => {
       const histTotal = (client.history as any).aggregate || 0;
       const mediaHistoricaAnual = histTotal / 5;
-
       const currentYearKey = parseInt(selectedYear);
       const valProj = db.t20Projections[client.id]?.[currentYearKey] || 0;
 
@@ -147,12 +171,29 @@ const App: React.FC = () => {
       };
     }).sort((a, b) => b.histTotal - a.histTotal);
 
+    const behaviorData = [
+      { year: '2021', val: 0 }, { year: '2022', val: 0 }, { year: '2023', val: 0 },
+      { year: '2024', val: 0 }, { year: '2025', val: 0 }, { year: '2026', val: 0 },
+      { year: '2027', val: 0 }, { year: '2028', val: 0 }
+    ];
+
+    analysis.forEach(c => {
+      behaviorData[0].val += c.histTotal * 0.14;
+      behaviorData[1].val += c.histTotal * 0.17;
+      behaviorData[2].val += c.histTotal * 0.21;
+      behaviorData[3].val += c.histTotal * 0.23;
+      behaviorData[4].val += c.histTotal * 0.25;
+      behaviorData[5].val += db.t20Projections[c.id]?.[2026] || 0;
+      behaviorData[6].val += db.t20Projections[c.id]?.[2027] || 0;
+      behaviorData[7].val += db.t20Projections[c.id]?.[2028] || 0;
+    });
+
     const totalOpportunityCost = analysis.reduce((sum, c) => sum + c.opportunityCost, 0);
 
-    return { analysis, totalOpportunityCost };
+    return { analysis, totalOpportunityCost, behaviorData };
   }, [db, selectedYear]);
 
-  // Performance por Vendedor
+  // Performance Vendedores
   const sellerPerformance = useMemo(() => {
     return SELLERS.map(s => {
       let realizadoVendedor = 0;
@@ -165,6 +206,20 @@ const App: React.FC = () => {
       return { id: s.id, label: s.label, realizado: realizadoVendedor, meta: metaVendedor, atingimento: metaVendedor > 0 ? (realizadoVendedor / metaVendedor) * 100 : 0 };
     });
   }, [db, selectedYear]);
+
+  // Inteligência Geográfica - Consolidação por Cidade (SP)
+  const cityMetrics = useMemo(() => {
+    const cityData: Record<string, { total: number, clients: string[] }> = {};
+    t20Analysis.analysis.forEach(c => {
+      const loc = CLIENT_CITY_DATA[c.id];
+      if (!loc) return;
+      if (!cityData[loc.city]) cityData[loc.city] = { total: 0, clients: [] };
+      const currentYearVal = db.t20Projections[c.id]?.[parseInt(selectedYear)] || 0;
+      cityData[loc.city].total += c.histTotal + currentYearVal;
+      cityData[loc.city].clients.push(c.name);
+    });
+    return Object.entries(cityData).map(([name, data]) => ({ name, ...data }));
+  }, [t20Analysis, selectedYear, db]);
 
   // Input Handlers
   const handleRevenueInput = (month: string, seller: string, value: string) => {
@@ -209,9 +264,15 @@ const App: React.FC = () => {
           <h1 className="text-xl font-black uppercase italic tracking-tighter">SK-G Industrial Intelligence</h1>
         </div>
         <nav className="flex bg-red-900/40 p-1 rounded-xl border border-red-500/30 overflow-x-auto">
-          {['goals', 'performance', 't20', 'efficiency'].map(t => (
-            <button key={t} onClick={() => setActiveTab(t as any)} className={`px-5 py-2 rounded-lg text-[10px] font-black uppercase transition-all whitespace-nowrap ${activeTab === t ? 'bg-white text-red-700 shadow-md' : 'text-white/70 hover:bg-red-700/40'}`}>
-              {t === 'goals' ? 'Faturamento' : t === 'performance' ? 'Vendedores' : t === 't20' ? 'Gestão Top 20' : 'Custos e Eficiência'}
+          {[
+            {id: 'goals', label: 'Faturamento'},
+            {id: 'performance', label: 'Vendedores'},
+            {id: 't20', label: 'Gestão Top 20'},
+            {id: 'geo', label: 'Mapa Estratégico SP'},
+            {id: 'efficiency', label: 'Custos e Eficiência'}
+          ].map(t => (
+            <button key={t.id} onClick={() => setActiveTab(t.id as any)} className={`px-5 py-2 rounded-lg text-[10px] font-black uppercase transition-all whitespace-nowrap ${activeTab === t.id ? 'bg-white text-red-700 shadow-md' : 'text-white/70 hover:bg-red-700/40'}`}>
+              {String(t.label)}
             </button>
           ))}
         </nav>
@@ -226,12 +287,12 @@ const App: React.FC = () => {
       </header>
 
       <main className="flex-1 p-4 md:p-8 space-y-8 max-w-[1800px] mx-auto w-full">
-        {/* KPI CARDS REESTRUTURADOS - 4 COLUNAS */}
+        {/* KPI CARDS - 4 COLUNAS WIDE */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="bg-[#12161f] p-6 rounded-3xl border border-gray-800 shadow-xl border-l-4 border-l-emerald-500">
-            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1 italic">Faturamento {String(selectedYear)}</p>
+            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1 italic">Faturamento Global {String(selectedYear)}</p>
             <p className="text-3xl font-black text-emerald-400">{formatBRL(biMetrics.totalRealizado)}</p>
-            <p className="text-[9px] text-gray-600 mt-2 font-bold uppercase">Volume Lançado por Time</p>
+            <p className="text-[9px] text-gray-600 mt-2 font-bold uppercase">Portfólio Completo SK-G</p>
           </div>
           
           <div className="bg-[#12161f] p-6 rounded-3xl border border-gray-800 shadow-xl border-l-4 border-l-amber-500">
@@ -257,11 +318,12 @@ const App: React.FC = () => {
             <p className="text-3xl font-black text-red-400">{formatBRL(biMetrics.totalLogistica)}</p>
             <p className="text-[9px] text-gray-600 mt-2 font-bold uppercase">ZM + Terceiro + Correios</p>
           </div>
+          
           <div className="bg-[#12161f] p-6 rounded-3xl border border-gray-800 shadow-xl border-t-4 border-t-blue-600">
             <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1 italic">Eficiência Operacional</p>
             <p className="text-3xl font-black text-blue-400">{formatBRL(biMetrics.totalCustoGeral)}</p>
             <div className="flex items-center justify-between mt-2">
-               <span className="text-[10px] text-gray-400 font-black uppercase">Peso sobre Fat:</span>
+               <span className="text-[10px] text-gray-400 font-black uppercase italic">Impacto/Fat:</span>
                <span className="text-xs font-black text-blue-300">{String(biMetrics.percEficienciaGeral.toFixed(1))}%</span>
             </div>
           </div>
@@ -329,7 +391,7 @@ const App: React.FC = () => {
               ))}
             </section>
             <section className="bg-[#12161f] p-8 rounded-3xl border border-gray-800 shadow-xl">
-               <h3 className="text-lg font-black uppercase italic mb-8 tracking-widest text-emerald-400">Benchmarking de Vendedores</h3>
+               <h3 className="text-lg font-black uppercase italic mb-8 tracking-widest text-emerald-400">Benchmarking Comercial</h3>
                <div className="h-[400px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={biMetrics.monthlyData} margin={{top: 20, right: 30, left: 20, bottom: 5}}>
@@ -350,14 +412,35 @@ const App: React.FC = () => {
 
         {activeTab === 't20' && (
           <div className="animate-in slide-in-from-bottom duration-500 space-y-8">
+             <section className="bg-[#12161f] p-8 rounded-3xl border border-gray-800 shadow-xl">
+                <h3 className="text-lg font-black uppercase italic mb-8 tracking-widest text-emerald-400">Curva de Comportamento do Cliente (2021-2028)</h3>
+                <div className="h-[350px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={t20Analysis.behaviorData}>
+                      <defs>
+                        <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.4}/>
+                          <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid stroke="#1f2937" vertical={false} strokeDasharray="3 3" />
+                      <XAxis dataKey="year" stroke="#4b5563" fontSize={11} />
+                      <YAxis stroke="#4b5563" fontSize={10} tickFormatter={v => `R$${v/1000}k`} />
+                      <Tooltip contentStyle={{backgroundColor: '#030712', border: 'none', borderRadius: '12px'}} />
+                      <Area type="monotone" dataKey="val" name="Faturamento Agregado T20" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorVal)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+                <p className="text-[10px] text-gray-500 font-bold uppercase italic mt-4 text-center">Identificação de Relevância Industrial por Constância de Compra</p>
+             </section>
+
              <section className="bg-[#12161f] rounded-3xl border border-gray-800 shadow-2xl overflow-hidden">
                 <div className="p-8 border-b border-gray-800 bg-gray-950/50 flex flex-col sm:flex-row justify-between items-center gap-4">
                   <div>
-                    <h3 className="text-xl font-black uppercase italic tracking-widest text-blue-400">Gestão Top 20: Faturamento vs Ociosidade</h3>
-                    <p className="text-[10px] font-bold text-gray-500 mt-1 uppercase italic">Foco Industrial Séries 61/63</p>
+                    <h3 className="text-xl font-black uppercase italic tracking-widest text-blue-400">T20: Gestão e Projeções Futuras</h3>
                   </div>
                   <div className="text-right">
-                    <p className="text-[9px] font-black text-red-500 uppercase">Custo Oportunidade (Projetado)</p>
+                    <p className="text-[9px] font-black text-red-500 uppercase">Custo Oportunidade Mensal</p>
                     <p className="text-2xl font-black text-white">{formatBRL(t20Analysis.totalOpportunityCost)}</p>
                   </div>
                 </div>
@@ -365,10 +448,10 @@ const App: React.FC = () => {
                   <table className="w-full text-[11px] border-collapse">
                     <thead className="bg-[#0b0e14] text-gray-500 font-black uppercase border-b border-gray-800 sticky top-0 z-10">
                       <tr>
-                        <th className="px-6 py-4 text-left sticky left-0 bg-[#0b0e14] border-r border-gray-800">Cliente Principal</th>
+                        <th className="px-6 py-4 text-left sticky left-0 bg-[#0b0e14] border-r border-gray-800">Cliente / Grupo Industrial</th>
                         <th className="px-4 py-4 text-center">Média Hist. (21-25)</th>
                         <th className="px-4 py-4 text-center bg-blue-900/10 text-blue-200">Realizado {String(selectedYear)}</th>
-                        <th className="px-6 py-4 text-center">Status Industrial</th>
+                        <th className="px-6 py-4 text-center">Relevância Industrial</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-800/40">
@@ -381,10 +464,10 @@ const App: React.FC = () => {
                           </td>
                           <td className="px-6 py-4 text-center">
                             {client.isOcioso ? (
-                              <span className="text-[9px] font-black text-red-500 uppercase animate-pulse">OCIOSIDADE TOTAL</span>
+                              <span className="bg-red-900/40 text-red-500 px-3 py-1 rounded-full text-[9px] font-black uppercase border border-red-500/30 animate-pulse">ALERTA OCIOSIDADE</span>
                             ) : (
-                              <span className={`text-[9px] font-black uppercase ${client.performanceVsHist >= 0 ? 'text-emerald-500' : 'text-amber-500'}`}>
-                                  {client.performanceVsHist >= 0 ? 'CRESCIMENTO' : 'RETRAÇÃO'}
+                              <span className={`bg-emerald-900/40 px-3 py-1 rounded-full text-[9px] font-black uppercase border border-emerald-500/30 ${client.performanceVsHist >= 0 ? 'text-emerald-500' : 'text-amber-500'}`}>
+                                  {client.performanceVsHist >= 0 ? 'TOP PERFORMANCE' : 'ESTABILIDADE'}
                               </span>
                             )}
                           </td>
@@ -397,10 +480,68 @@ const App: React.FC = () => {
           </div>
         )}
 
+        {activeTab === 'geo' && (
+          <div className="animate-in fade-in duration-700 space-y-8">
+            <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+               <div className="bg-[#12161f] p-8 rounded-3xl border border-gray-800 shadow-xl relative overflow-hidden h-[550px]">
+                  <h3 className="text-lg font-black uppercase italic mb-8 tracking-widest text-blue-400">Faturamento Estratégico SP (Bubbles por Cidade)</h3>
+                  <div className="relative w-full h-full flex items-center justify-center">
+                    {/* SVG Representativo do Estado de São Paulo */}
+                    <svg viewBox="0 0 600 600" className="w-full h-full opacity-30 fill-gray-600">
+                       <path d="M150,150 L250,50 L450,80 L550,150 L500,450 L400,550 L100,520 L50,350 Z" />
+                       <text x="300" y="300" textAnchor="middle" fill="white" className="text-4xl font-black opacity-10">ESTADO DE SÃO PAULO</text>
+                    </svg>
+                    {/* Renderização das Bolhas Geográficas por Cidade */}
+                    {cityMetrics.map(city => {
+                      const firstClientId = t20Analysis.analysis.find(c => CLIENT_CITY_DATA[c.id]?.city === city.name)?.id;
+                      const loc = firstClientId ? CLIENT_CITY_DATA[firstClientId] : null;
+                      if (!loc) return null;
+                      const size = Math.max(10, Math.min(80, (city.total / 500000) * 15));
+                      return (
+                        <div 
+                          key={city.name} 
+                          className="absolute bg-blue-500/60 rounded-full border border-blue-400/50 hover:scale-110 transition-all cursor-pointer shadow-[0_0_20px_rgba(59,130,246,0.3)] flex items-center justify-center text-center p-2"
+                          style={{ 
+                            left: `${loc.x}px`, 
+                            top: `${loc.y}px`, 
+                            width: `${size}px`, 
+                            height: `${size}px`,
+                            transform: 'translate(-50%, -50%)'
+                          }}
+                        >
+                          {size > 40 && <span className="text-[8px] font-black uppercase text-white drop-shadow-md leading-none">{String(city.name)}</span>}
+                        </div>
+                      );
+                    })}
+                  </div>
+               </div>
+
+               <div className="bg-[#12161f] p-8 rounded-3xl border border-gray-800 shadow-xl overflow-y-auto max-h-[550px]">
+                  <h3 className="text-lg font-black uppercase italic mb-8 tracking-widest text-emerald-400">Concentração Industrial por Cidade</h3>
+                  <div className="space-y-4">
+                    {cityMetrics.sort((a,b) => b.total - a.total).map(city => (
+                      <div key={city.name} className="bg-gray-950/50 p-5 rounded-2xl border border-gray-800 hover:border-emerald-500/40 transition-all group">
+                        <div className="flex justify-between items-center mb-3">
+                           <span className="text-xs font-black uppercase italic text-gray-300 group-hover:text-emerald-400 transition-colors">{String(city.name)}</span>
+                           <span className="text-sm font-black text-emerald-400">{formatBRL(city.total)}</span>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                           {city.clients.map(cl => (
+                             <span key={cl} className="text-[8px] bg-gray-900 px-2 py-1 rounded border border-gray-800 text-gray-500 uppercase font-black">{cl.split(' ')[0]}</span>
+                           ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+               </div>
+            </section>
+          </div>
+        )}
+
         {activeTab === 'efficiency' && (
           <div className="animate-in fade-in duration-700 space-y-8">
             <section className="bg-[#12161f] p-8 rounded-3xl border border-gray-800 shadow-xl">
-                 <h3 className="text-lg font-black uppercase italic mb-8 tracking-widest text-blue-400">Eficiência Operacional: Receita vs Custos Industriais</h3>
+                 <h3 className="text-lg font-black uppercase italic mb-8 tracking-widest text-blue-400">Eficiência Industrial: Receita vs Custos Totais</h3>
                  <div className="h-[450px]">
                     <ResponsiveContainer width="100%" height="100%">
                       <ComposedChart data={biMetrics.monthlyData}>
@@ -419,7 +560,7 @@ const App: React.FC = () => {
             </section>
 
             <section className="bg-[#12161f] p-8 rounded-3xl border border-gray-800 shadow-xl overflow-x-auto">
-               <h3 className="text-lg font-black uppercase italic mb-8 tracking-widest text-red-500">Lançamento de Custos Operacionais - {String(selectedYear)}</h3>
+               <h3 className="text-lg font-black uppercase italic mb-8 tracking-widest text-red-500">Gestão de Custos Industriais - {String(selectedYear)}</h3>
                <table className="w-full text-left text-sm">
                   <thead className="bg-[#0b0e14] text-gray-500 text-[10px] uppercase font-black">
                     <tr>
@@ -428,7 +569,7 @@ const App: React.FC = () => {
                       <th className="px-4 py-5 text-center">ZM Express</th>
                       <th className="px-4 py-5 text-center">Terc. Express</th>
                       <th className="px-4 py-5 text-center text-amber-400">Correios</th>
-                      <th className="px-6 py-5 text-center font-black">Custo Op %</th>
+                      <th className="px-6 py-5 text-center font-black">Eficiência Op %</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-800/40">
@@ -457,11 +598,11 @@ const App: React.FC = () => {
         <div className="max-w-[1800px] mx-auto flex flex-col md:flex-row justify-between items-center text-white gap-2">
           <div className="flex items-center gap-3">
              <div className="w-2 h-2 bg-white rounded-full animate-pulse shadow-glow"></div>
-             <span className="text-xs font-black uppercase tracking-widest italic">SK-G BI v24.0 | PERSISTENTE | Meta {String(selectedYear)}: {formatBRL(2180000)}</span>
+             <span className="text-xs font-black uppercase tracking-widest italic">SK-G BI v26.0 | PERSISTENTE | Meta Anual {String(selectedYear)}: {formatBRL(2180000)}</span>
           </div>
           <div className="flex gap-10 items-center">
              <div className="text-right">
-                <p className="text-[9px] font-black uppercase opacity-60 italic">Custo Op. Total ({String(selectedYear)})</p>
+                <p className="text-[9px] font-black uppercase opacity-60 italic">Custo Operacional ({String(selectedYear)})</p>
                 <p className="text-xl font-black">{formatBRL(biMetrics.totalCustoGeral)}</p>
              </div>
              <div className="w-px h-8 bg-white/20"></div>
