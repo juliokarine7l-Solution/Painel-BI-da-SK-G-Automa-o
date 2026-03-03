@@ -40,7 +40,7 @@ const CLIENT_CITY_DATA: Record<string, { x: number, y: number, city: string }> =
   c10: { x: 385, y: 330, city: 'Valinhos' },
   c11: { x: 355, y: 335, city: 'Elias Fausto' },
   c12: { x: 420, y: 340, city: 'Itatiba' },
-  c13: { x: 360, y: 340, city: 'Indaiatuba' },
+  c13: { x: 440, y: 345, city: 'Atibaia' },
   c14: { x: 390, y: 345, city: 'Itupeva' },
   c15: { x: 360, y: 380, city: 'Sorocaba' },
   c16: { x: 405, y: 355, city: 'Várzea Paulista' },
@@ -329,6 +329,24 @@ const App: React.FC = () => {
           </div>
         </section>
 
+        {/* SELLER PERFORMANCE CARDS - ROW 2 */}
+        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {sellerPerformance.map(s => (
+            <div key={s.id} className="bg-[#12161f] p-6 rounded-3xl border border-gray-800 shadow-xl relative overflow-hidden group">
+              <div className={`absolute top-0 left-0 w-1 h-full ${s.atingimento >= 100 ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
+              <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1 italic">{String(s.label)}</p>
+              <p className="text-3xl font-black text-white">{formatBRL(s.realizado)}</p>
+              <p className="text-[9px] text-gray-600 mt-2 font-bold uppercase">Meta Comercial: {formatBRL(s.meta)}</p>
+              <div className="flex items-center justify-between mt-4">
+                <span className={`text-sm font-black ${s.atingimento >= 100 ? 'text-emerald-400' : 'text-red-500'}`}>{String(s.atingimento.toFixed(1))}%</span>
+                <div className="flex-1 h-1.5 bg-gray-900 ml-4 rounded-full overflow-hidden">
+                  <div className={`h-full transition-all duration-1000 ${s.atingimento >= 100 ? 'bg-emerald-500' : 'bg-red-500'}`} style={{width: `${Math.min(100, s.atingimento)}%`}}></div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </section>
+
         {activeTab === 'goals' && (
           <div className="animate-in fade-in duration-500 space-y-8">
             <section className="bg-[#12161f] p-8 rounded-3xl border border-gray-800 shadow-xl">
@@ -375,37 +393,89 @@ const App: React.FC = () => {
 
         {activeTab === 'performance' && (
           <div className="animate-in fade-in duration-500 space-y-8">
-            <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-              {sellerPerformance.map(s => (
-                <div key={s.id} className="bg-[#12161f] p-6 rounded-3xl border border-gray-800 shadow-xl">
-                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1 italic">{String(s.label)}</p>
-                  <p className="text-2xl font-black text-white">{formatBRL(s.realizado)}</p>
-                  <p className="text-[9px] text-gray-600 mt-2 font-bold uppercase">Meta Comercial: {formatBRL(s.meta)}</p>
-                  <div className="flex items-center justify-between mt-3">
-                    <span className={`text-xs font-black ${s.atingimento >= 100 ? 'text-emerald-400' : 'text-red-500'}`}>{String(s.atingimento.toFixed(1))}%</span>
-                    <div className="flex-1 h-1.5 bg-gray-900 ml-4 rounded-full overflow-hidden">
-                      <div className={`h-full ${s.atingimento >= 100 ? 'bg-emerald-500' : 'bg-red-500'}`} style={{width: `${Math.min(100, s.atingimento)}%`}}></div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </section>
             <section className="bg-[#12161f] p-8 rounded-3xl border border-gray-800 shadow-xl">
-               <h3 className="text-lg font-black uppercase italic mb-8 tracking-widest text-emerald-400">Benchmarking Comercial</h3>
+               <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+                 <h3 className="text-lg font-black uppercase italic tracking-widest text-emerald-400">Benchmarking Comercial: Market Share Interno</h3>
+                 <div className="flex gap-2">
+                    <div className="flex items-center gap-2 px-3 py-1 bg-gray-900 rounded-lg border border-gray-800">
+                       <div className="w-3 h-3 bg-[#10b981] rounded-full"></div>
+                       <span className="text-[10px] font-bold uppercase text-gray-400">Syllas</span>
+                    </div>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-gray-900 rounded-lg border border-gray-800">
+                       <div className="w-3 h-3 bg-[#1e3a8a] rounded-full"></div>
+                       <span className="text-[10px] font-bold uppercase text-gray-400">V1</span>
+                    </div>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-gray-900 rounded-lg border border-gray-800">
+                       <div className="w-3 h-3 bg-[#ef4444] rounded-full"></div>
+                       <span className="text-[10px] font-bold uppercase text-gray-400">V2</span>
+                    </div>
+                 </div>
+               </div>
                <div className="h-[400px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={biMetrics.monthlyData} margin={{top: 20, right: 30, left: 20, bottom: 5}}>
                       <CartesianGrid stroke="#1f2937" vertical={false} strokeDasharray="3 3" />
                       <XAxis dataKey="month" stroke="#4b5563" fontSize={11} />
                       <YAxis stroke="#4b5563" fontSize={10} tickFormatter={v => `R$${v/1000}k`} />
-                      <Tooltip contentStyle={{backgroundColor: '#030712', border: 'none', borderRadius: '12px'}} />
-                      <Legend />
-                      <Bar dataKey="syllas" name="Syllas (Dir)" fill="#10b981" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="v1" name="Vendedora 01" fill="#1e3a8a" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="v2" name="Vendedora 02" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                      <Tooltip 
+                        contentStyle={{backgroundColor: '#030712', border: 'none', borderRadius: '12px'}}
+                        itemStyle={{fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase'}}
+                      />
+                      <Bar dataKey="syllas" name="Syllas (Dir)" fill="#10b981" radius={[4, 4, 0, 0]} barSize={20} />
+                      <Bar dataKey="v1" name="Vendedora 01" fill="#1e3a8a" radius={[4, 4, 0, 0]} barSize={20} />
+                      <Bar dataKey="v2" name="Vendedora 02" fill="#ef4444" radius={[4, 4, 0, 0]} barSize={20} />
                     </BarChart>
                   </ResponsiveContainer>
                </div>
+            </section>
+
+            <section className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+               {SELLERS.filter(s => s.id !== 'v3').map(seller => {
+                 const sellerData = biMetrics.monthlyData.map(m => ({
+                   month: m.month,
+                   realizado: m[seller.id as keyof typeof m] as number,
+                   meta: INDIVIDUAL_METAS[seller.id][m.month]
+                 }));
+                 const performance = sellerPerformance.find(p => p.id === seller.id);
+
+                 return (
+                   <div key={seller.id} className="bg-[#12161f] p-6 rounded-3xl border border-gray-800 shadow-xl">
+                      <div className="flex justify-between items-start mb-6">
+                        <div>
+                          <h4 className="text-sm font-black uppercase italic text-gray-400">{String(seller.label)}</h4>
+                          <p className="text-xs text-gray-500 font-bold">Análise Mensal de Performance</p>
+                        </div>
+                        <div className="text-right">
+                          <p className={`text-lg font-black ${performance && performance.atingimento >= 100 ? 'text-emerald-400' : 'text-red-500'}`}>
+                            {performance ? performance.atingimento.toFixed(1) : '0.0'}%
+                          </p>
+                        </div>
+                      </div>
+                      <div className="h-[200px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <ComposedChart data={sellerData}>
+                            <CartesianGrid stroke="#1f2937" vertical={false} strokeDasharray="3 3" />
+                            <XAxis dataKey="month" hide />
+                            <YAxis hide />
+                            <Tooltip contentStyle={{backgroundColor: '#030712', border: 'none', borderRadius: '8px', fontSize: '10px'}} />
+                            <Area type="monotone" dataKey="realizado" fill={seller.id === 'syllas' ? '#10b981' : seller.id === 'v1' ? '#1e3a8a' : '#ef4444'} fillOpacity={0.2} stroke={seller.id === 'syllas' ? '#10b981' : seller.id === 'v1' ? '#1e3a8a' : '#ef4444'} strokeWidth={2} />
+                            <Line type="monotone" dataKey="meta" stroke="#374151" strokeDasharray="5 5" dot={false} />
+                          </ComposedChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <div className="mt-4 grid grid-cols-2 gap-4">
+                         <div className="bg-gray-950/50 p-3 rounded-xl border border-gray-800">
+                            <p className="text-[8px] font-black text-gray-500 uppercase">Total Realizado</p>
+                            <p className="text-sm font-black text-white">{formatBRL(performance?.realizado || 0)}</p>
+                         </div>
+                         <div className="bg-gray-950/50 p-3 rounded-xl border border-gray-800">
+                            <p className="text-[8px] font-black text-gray-500 uppercase">Meta Anual</p>
+                            <p className="text-sm font-black text-white">{formatBRL(performance?.meta || 0)}</p>
+                         </div>
+                      </div>
+                   </div>
+                 );
+               })}
             </section>
           </div>
         )}
