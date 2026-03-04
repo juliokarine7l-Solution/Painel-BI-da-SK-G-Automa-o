@@ -356,8 +356,11 @@ const App: React.FC = () => {
                     <ComposedChart data={biMetrics.monthlyData}>
                       <CartesianGrid stroke="#1f2937" vertical={false} strokeDasharray="3 3" />
                       <XAxis dataKey="month" stroke="#4b5563" fontSize={11} />
-                      <YAxis stroke="#4b5563" fontSize={10} tickFormatter={v => `R$${v/1000}k`} />
-                      <Tooltip contentStyle={{backgroundColor: '#030712', border: 'none', borderRadius: '12px'}} />
+                      <YAxis stroke="#4b5563" fontSize={10} tickFormatter={v => formatBRL(v)} />
+                      <Tooltip 
+                        contentStyle={{backgroundColor: '#030712', border: 'none', borderRadius: '12px'}} 
+                        formatter={(v: number) => [formatBRL(v), "Valor"]}
+                      />
                       <Bar dataKey="realizado" name="Faturamento Real" fill="#10b981" radius={[4, 4, 0, 0]} barSize={25} />
                       <Line type="monotone" dataKey="meta" name="Meta de Vendas" stroke="#1e3a8a" strokeWidth={3} dot={{r: 4}} />
                     </ComposedChart>
@@ -416,10 +419,11 @@ const App: React.FC = () => {
                     <BarChart data={biMetrics.monthlyData} margin={{top: 20, right: 30, left: 20, bottom: 5}}>
                       <CartesianGrid stroke="#1f2937" vertical={false} strokeDasharray="3 3" />
                       <XAxis dataKey="month" stroke="#4b5563" fontSize={11} />
-                      <YAxis stroke="#4b5563" fontSize={10} tickFormatter={v => `R$${v/1000}k`} />
+                      <YAxis stroke="#4b5563" fontSize={10} tickFormatter={v => formatBRL(v)} />
                       <Tooltip 
                         contentStyle={{backgroundColor: '#030712', border: 'none', borderRadius: '12px'}}
                         itemStyle={{fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase'}}
+                        formatter={(v: number) => [formatBRL(v), "Valor"]}
                       />
                       <Bar dataKey="syllas" name="Syllas (Dir)" fill="#10b981" radius={[4, 4, 0, 0]} barSize={20} />
                       <Bar dataKey="v1" name="Vendedora 01" fill="#1e3a8a" radius={[4, 4, 0, 0]} barSize={20} />
@@ -457,7 +461,10 @@ const App: React.FC = () => {
                             <CartesianGrid stroke="#1f2937" vertical={false} strokeDasharray="3 3" />
                             <XAxis dataKey="month" hide />
                             <YAxis hide />
-                            <Tooltip contentStyle={{backgroundColor: '#030712', border: 'none', borderRadius: '8px', fontSize: '10px'}} />
+                            <Tooltip 
+                              contentStyle={{backgroundColor: '#030712', border: 'none', borderRadius: '8px', fontSize: '10px'}} 
+                              formatter={(v: number) => [formatBRL(v), "Valor"]}
+                            />
                             <Area type="monotone" dataKey="realizado" fill={seller.id === 'syllas' ? '#10b981' : seller.id === 'v1' ? '#1e3a8a' : '#ef4444'} fillOpacity={0.2} stroke={seller.id === 'syllas' ? '#10b981' : seller.id === 'v1' ? '#1e3a8a' : '#ef4444'} strokeWidth={2} />
                             <Line type="monotone" dataKey="meta" stroke="#374151" strokeDasharray="5 5" dot={false} />
                           </ComposedChart>
@@ -495,8 +502,11 @@ const App: React.FC = () => {
                       </defs>
                       <CartesianGrid stroke="#1f2937" vertical={false} strokeDasharray="3 3" />
                       <XAxis dataKey="year" stroke="#4b5563" fontSize={11} />
-                      <YAxis stroke="#4b5563" fontSize={10} tickFormatter={v => `R$${v/1000}k`} />
-                      <Tooltip contentStyle={{backgroundColor: '#030712', border: 'none', borderRadius: '12px'}} />
+                      <YAxis stroke="#4b5563" fontSize={10} tickFormatter={v => formatBRL(v)} />
+                      <Tooltip 
+                        contentStyle={{backgroundColor: '#030712', border: 'none', borderRadius: '12px'}} 
+                        formatter={(v: number) => [formatBRL(v), "Faturamento Agregado T20"]}
+                      />
                       <Area type="monotone" dataKey="val" name="Faturamento Agregado T20" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorVal)" />
                     </AreaChart>
                   </ResponsiveContainer>
@@ -617,9 +627,12 @@ const App: React.FC = () => {
                       <ComposedChart data={biMetrics.monthlyData}>
                         <CartesianGrid stroke="#1f2937" vertical={false} strokeDasharray="3 3" />
                         <XAxis dataKey="month" stroke="#4b5563" fontSize={11} />
-                        <YAxis yAxisId="left" stroke="#4b5563" fontSize={10} tickFormatter={v => `R$${v/1000}k`} />
+                        <YAxis yAxisId="left" stroke="#4b5563" fontSize={10} tickFormatter={v => formatBRL(v)} />
                         <YAxis yAxisId="right" orientation="right" stroke="#10b981" fontSize={10} tickFormatter={v => `${v}%`} />
-                        <Tooltip contentStyle={{backgroundColor: '#030712', border: 'none', borderRadius: '12px'}} />
+                        <Tooltip 
+                          contentStyle={{backgroundColor: '#030712', border: 'none', borderRadius: '12px'}} 
+                          formatter={(v: number, name: string) => name.includes('%') ? [`${v.toFixed(1)}%`, name] : [formatBRL(v), name]}
+                        />
                         <Legend />
                         <Bar yAxisId="left" dataKey="realizado" name="Faturamento" fill="#1e3a8a" radius={[4, 4, 0, 0]} barSize={30} />
                         <Bar yAxisId="left" dataKey="custoTotal" name="Custo Operacional" fill="#ef4444" radius={[4, 4, 0, 0]} barSize={15} />
