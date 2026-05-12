@@ -116,7 +116,7 @@ const App: React.FC = () => {
           <h1 className="text-xl font-black italic">SK-G INDUSTRIAL INTELLIGENCE</h1>
         </div>
         <div className="flex gap-2 items-center">
-          {['FATURAMENTO E CUSTOS', 'VENDEDORES', 'GESTÃO TOP 20', 'ANÁLISE TRIMESTRAL'].map(tab => (
+          {['FATURAMENTO E CUSTOS', 'VENDEDORES', 'DASHBOARD T10', 'GESTÃO TOP 20', 'ANÁLISE TRIMESTRAL'].map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)} className={`px-4 py-2 text-xs font-bold rounded ${activeTab === tab ? 'bg-white text-red-700' : 'bg-red-900/50 text-white hover:bg-red-900'}`}>{tab}</button>
           ))}
           <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="bg-red-900 text-white font-bold p-2 rounded">
@@ -424,6 +424,184 @@ const App: React.FC = () => {
                </table>
              </div>
            </section>
+        </div>
+      )}
+
+      {activeTab === 'DASHBOARD T10' && (
+        <div className="space-y-8 animate-in slide-in-from-right duration-500">
+          {/* Section 1: Curva de Evolução Visual (ASCII-Style inspired) */}
+          <section className="bg-[#0a0c10] p-8 rounded-3xl border border-gray-800 shadow-2xl">
+            <div className="flex justify-between items-center mb-10">
+              <div>
+                <h2 className="text-white font-black italic text-3xl uppercase tracking-tighter">DASHBOARD EVOLUTIVO T10</h2>
+                <p className="text-xs text-gray-500 mt-1 uppercase font-bold italic tracking-widest">Análise de Comportamento e Ciclo de Vida (2022-2028)</p>
+              </div>
+              <div className="flex gap-4">
+                <div className="bg-gray-950 p-4 rounded-xl border border-gray-800">
+                  <p className="text-[10px] text-gray-500 font-bold uppercase mb-1">Total Histórico (22-25)</p>
+                  <p className="text-xl font-black text-white font-mono">
+                    {formatBRL(gestaoTop20.clientes.slice(0, 10).reduce((acc: number, c: any) => 
+                      acc + Object.values(c.history).reduce((a: any, b: any) => a + b, 0), 0
+                    ))}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+              {/* The "ASCII" and Chart Area */}
+              <div className="lg:col-span-3 bg-gray-950/50 p-6 rounded-2xl border border-gray-800 relative">
+                <ChartWrapper height={400}>
+                   <ComposedChart 
+                     data={[2022, 2023, 2024, 2025, 2026, 2027, 2028].map(year => ({
+                       year: String(year),
+                       total: gestaoTop20.clientes.slice(0, 10).reduce((acc: number, c: any) => {
+                         if (year <= 2025) return acc + (c.history[year] || 0);
+                         const pKey = `projection${year}`;
+                         return acc + (c[pKey] || 0);
+                       }, 0)
+                     }))}
+                    >
+                     <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
+                     <XAxis dataKey="year" stroke="#444" fontSize={12} tick={{ fill: '#666', fontWeight: 'bold' }} />
+                     <YAxis stroke="#444" fontSize={10} width={80} tickFormatter={v => `R$${(v/1000).toFixed(0)}k`} />
+                     <Tooltip 
+                        contentStyle={{ backgroundColor: '#000', border: '1px solid #333' }}
+                        formatter={(v: number) => formatBRL(v)}
+                     />
+                     <Area type="monotone" dataKey="total" fill="#ef4444" stroke="#ef4444" fillOpacity={0.1} strokeWidth={4} />
+                     <Bar dataKey="total" fill="#ef4444" radius={[4, 4, 0, 0]} opacity={0.3} barSize={40} />
+                     <Line type="monotone" dataKey="total" stroke="#fff" strokeWidth={2} dot={{ r: 6, fill: '#ef4444', stroke: '#fff', strokeWidth: 2 }} />
+                   </ComposedChart>
+                </ChartWrapper>
+                
+                {/* stylized curve ASCII summary indicator */}
+                <div className="absolute top-10 right-10 text-right opacity-30 select-none pointer-events-none font-mono text-[8px] leading-tight">
+                  <pre>
+                    {(() => {
+                      const points = [2022, 2023, 2024, 2025, 2026, 2027, 2028].map(year => 
+                        gestaoTop20.clientes.slice(0, 10).reduce((acc: number, c: any) => {
+                          if (year <= 2025) return acc + (c.history[year] || 0);
+                          return acc + (c[`projection${year}`] || 0);
+                        }, 0)
+                      );
+                      const max = Math.max(...points) || 1;
+                      return points.map(p => {
+                        const level = Math.floor((p / max) * 10);
+                        return '_'.repeat(10-level) + '█' + '_'.repeat(level);
+                      }).join('\n');
+                    })()}
+                  </pre>
+                </div>
+              </div>
+
+              {/* Trend Analysis Side Panel */}
+              <div className="bg-gray-900/50 p-6 rounded-2xl border border-gray-800 border-l-4 border-l-red-600">
+                <h3 className="text-white font-black italic text-sm mb-6 uppercase">Mentoria de Crescimento (T10)</h3>
+                <div className="space-y-6">
+                  {(() => {
+                    const topClient = gestaoTop20.clientes[0];
+                    const v2025 = topClient.history[2025] || 0;
+                    const v2026 = topClient.projection2026 || 0;
+                    const growth = v2025 > 0 ? ((v2026/v2025)-1)*100 : 0;
+                    
+                    return (
+                      <div className="space-y-4">
+                        <div className="p-3 bg-red-950/20 border border-red-900/50 rounded-lg">
+                          <p className="text-[10px] text-red-400 font-black uppercase">Foco Principal: {topClient.nome}</p>
+                          <p className="text-xs text-gray-400 mt-2 leading-relaxed">
+                            {growth > 0 
+                              ? `Crescimento projetado de ${growth.toFixed(1)}%. Mantenha a cadência de pedidos via SPIN Selling.` 
+                              : `Atenção: Queda de ${Math.abs(growth).toFixed(1)}% detectada. Risco de ociosidade técnica.`}
+                          </p>
+                        </div>
+                        <div className="p-3 bg-gray-950 border border-gray-800 rounded-lg">
+                          <p className="text-[10px] text-emerald-400 font-black uppercase">Ação Recomendada</p>
+                          <p className="text-xs text-gray-400 mt-2 italic">"Use o histórico da Fertipar para contornar objeções de preço em novos contratos 2026."</p>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Section 2: Tabela Comparativa de Lançamento */}
+          <section className="bg-gray-900 p-8 rounded-3xl border border-gray-800 shadow-xl overflow-hidden">
+             <div className="flex justify-between items-center mb-8">
+               <h3 className="text-white font-black italic text-xl uppercase italic">Lançamento de Dados & Status de Estabilidade</h3>
+               <button onClick={handleSave} className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-full font-black text-xs transition-colors shadow-lg shadow-emerald-900/20">SALVAR ALTERAÇÕES</button>
+             </div>
+
+             <div className="overflow-x-auto">
+               <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b border-gray-800 text-[10px] text-gray-500 font-black uppercase tracking-widest">
+                       <th className="px-6 py-4">Cliente / Grupo Industrial</th>
+                       <th className="px-6 py-4 text-center">Média Hist. (22-25)</th>
+                       <th className="px-6 py-4 text-center">Real 2025</th>
+                       <th className="px-6 py-4 text-center">Proj/Real 2026</th>
+                       <th className="px-6 py-4 text-center">Proj 2027</th>
+                       <th className="px-6 py-4 text-center">Proj 2028</th>
+                       <th className="px-6 py-4 text-center">Trend Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-800/50">
+                    {gestaoTop20.clientes.slice(0, 10).map((c: any, idx: number) => {
+                      const hist = Object.values(c.history) as number[];
+                      const avg = hist.reduce((a, b) => a + b, 0) / (hist.length || 1);
+                      const real2025 = c.history[2025] || 0;
+                      
+                      const isGrowing = c.projection2026 > real2025;
+                      const isStable = Math.abs((c.projection2026 / (real2025 || 1)) - 1) < 0.1;
+
+                      return (
+                        <tr key={c.id} className="hover:bg-gray-800/20 transition-colors group">
+                          <td className="px-6 py-5">
+                            <p className="text-white font-black text-sm uppercase tracking-tighter truncate w-64">{c.nome}</p>
+                            <p className="text-[10px] text-gray-600 font-bold tracking-widest">{c.cidade} | ID: {c.id}</p>
+                          </td>
+                          <td className="px-6 py-5 text-center font-mono text-xs text-gray-400">{formatBRL(avg)}</td>
+                          <td className="px-6 py-5 text-center font-mono text-xs text-gray-500">{formatBRL(real2025)}</td>
+                          
+                          {/* Editable Projection 2026-2028 */}
+                          {[2026, 2027, 2028].map(year => (
+                            <td key={year} className="px-6 py-5">
+                               <input 
+                                 type="text"
+                                 className="bg-gray-950 border border-gray-800 text-right font-mono text-[11px] font-black text-emerald-400 p-2 w-full rounded focus:ring-1 focus:ring-red-500 outline-none transition-all"
+                                 value={c[`projection${year}`] === 0 ? '' : formatBRL(c[`projection${year}`])}
+                                 placeholder="R$ 0,00"
+                                 onChange={(e) => {
+                                   const rawValue = e.target.value.replace(/[R$\s.]/g, '').replace(',', '.');
+                                   const val = parseFloat(rawValue) || 0;
+                                   const pKey = `projection${year}`;
+                                   setGestaoTop20((prev: any) => ({
+                                     ...prev,
+                                     clientes: prev.clientes.map((item: any) => item.id === c.id ? { ...item, [pKey]: val } : item)
+                                   }));
+                                 }}
+                               />
+                            </td>
+                          ))}
+
+                          <td className="px-6 py-5 text-center">
+                            {isGrowing ? (
+                              <span className="bg-emerald-500/10 text-emerald-500 text-[9px] font-black px-3 py-1 rounded-full border border-emerald-500/30">EXPANSÃO</span>
+                            ) : isStable ? (
+                              <span className="bg-amber-500/10 text-amber-500 text-[9px] font-black px-3 py-1 rounded-full border border-amber-500/30">ESTABILIDADE</span>
+                            ) : (
+                              <span className="bg-red-500/10 text-red-500 text-[9px] font-black px-3 py-1 rounded-full border border-red-500/30">OCIOSIDADE</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+               </table>
+             </div>
+          </section>
         </div>
       )}
 
