@@ -25,7 +25,7 @@ export const metaMensal = [
 ];
 
 const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('FATURAMENTO');
+  const [activeTab, setActiveTab] = useState('FATURAMENTO E CUSTOS');
   const [metas, setMetas] = useState(() => JSON.parse(localStorage.getItem('skg-metas') || JSON.stringify(metaMensal)));
   const [vendedorData, setVendedorData] = useState(() => JSON.parse(localStorage.getItem('skg-vendedores') || JSON.stringify(initialSalespersonData['2026'])));
   const [quarterlyHistory, setQuarterlyHistory] = useState<QuarterlyData[]>(() => JSON.parse(localStorage.getItem('skg-quarterly') || JSON.stringify(initialQuarterlyHistory)));
@@ -35,7 +35,6 @@ const App: React.FC = () => {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        // Migração/Validação: Verifica se os clientes têm o objeto history
         if (parsed.clientes && parsed.clientes.length > 0 && parsed.clientes[0].history) {
           return parsed;
         }
@@ -46,7 +45,7 @@ const App: React.FC = () => {
     return initialGestaoTop20;
   });
   const [selectedYear, setSelectedYear] = useState('2026');
-  
+
   const totalBilling2026 = useMemo(() => metas.reduce((acc: any, m: any) => acc + m.r2026, 0), [metas]);
   const metaAno = useMemo(() => metas.reduce((acc: any, m: any) => acc + m.meta, 0), [metas]);
   const atingimento = useMemo(() => (metaAno > 0 ? (totalBilling2026 / metaAno) * 100 : 0), [totalBilling2026, metaAno]);
@@ -149,8 +148,8 @@ const App: React.FC = () => {
                 <p className="text-xl font-black mt-2 text-red-500">{formatBRL(custos.reduce((a,c) => a + c.materiaPrima, 0))}</p>
               </div>
               <div className="bg-gray-900 p-6 rounded-2xl border border-gray-800 shadow-xl">
-                <p className="text-[10px] text-gray-400 uppercase font-bold">Custo Outros</p>
-                <p className="text-xl font-black mt-2 text-red-400">{formatBRL(custos.reduce((a,c) => a + c.zmExpress + c.tercExpress + c.correios, 0))}</p>
+                <p className="text-[10px] text-gray-400 uppercase font-bold">Custos Logísticos</p>
+                <p className="text-xl font-black mt-2 text-red-400">{formatBRL(custos.reduce((a: any,c: any) => a + c.zmExpress + c.tercExpress + c.correios, 0))}</p>
               </div>
            </section>
 
@@ -169,17 +168,70 @@ const App: React.FC = () => {
                 </ChartWrapper>
               </section>
               <section className="bg-gray-900 p-6 rounded-2xl border border-gray-800">
-                <h2 className="text-red-400 font-bold italic mb-4">CUSTOS: CAMOZZI VS OUTROS</h2>
+                <h2 className="text-red-400 font-bold italic mb-4 uppercase tracking-wider flex justify-between items-center">
+                  <span>CUSTOS: CAMOZZI VS LOGÍSTICA</span>
+                  <span className="text-[10px] text-gray-500 font-mono font-normal">Comparativo Estrutural de Custos</span>
+                </h2>
                 <ChartWrapper height={300}>
                   <ComposedChart data={custos}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#333" />
                     <XAxis dataKey="mes" stroke="#aaa" />
+                    <YAxis tickFormatter={v => `R$${v/1000}k`} stroke="#aaa" fontSize={10} />
                     <Tooltip contentStyle={{backgroundColor: '#000'}} labelStyle={{color: '#fff'}} formatter={(v: number) => formatBRL(v)} />
-                    <Bar dataKey="materiaPrima" fill="#3b82f6" name="Camozzi" />
-                    <Bar dataKey="tercExpress" fill="#ef4444" name="Outros" />
+                    <Bar dataKey="materiaPrima" fill="#3b82f6" name="Matéria-Prima (Camozzi)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey={(d: any) => d.zmExpress + d.tercExpress + d.correios} fill="#ef4444" name="Logística Total" radius={[4, 4, 0, 0]} />
                   </ComposedChart>
                 </ChartWrapper>
               </section>
+           </section>
+
+           <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+             <div className="lg:col-span-2 bg-gray-900 p-6 rounded-2xl border border-gray-800">
+                <h2 className="text-amber-400 font-bold italic mb-4 uppercase tracking-wider flex justify-between items-center text-sm">
+                  <span>COMPOSIÇÃO E TRENDS DE CUSTOS LOGÍSTICOS</span>
+                  <span className="text-[10px] text-gray-500 font-mono font-normal">Análise p/ Modal de Entrega</span>
+                </h2>
+                <ChartWrapper height={250}>
+                  <AreaChart data={custos}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
+                    <XAxis dataKey="mes" stroke="#666" fontSize={12} />
+                    <YAxis stroke="#666" fontSize={10} width={60} tickFormatter={v => formatBRL(v).split(',')[0]} />
+                    <Tooltip formatter={(v: number) => formatBRL(v)} contentStyle={{ backgroundColor: '#000', border: '1px solid #333' }} />
+                    <Area type="monotone" dataKey="zmExpress" stackId="1" stroke="#f59e0b" fill="#f59e0b" name="ZM Express" fillOpacity={0.6} />
+                    <Area type="monotone" dataKey="tercExpress" stackId="1" stroke="#ef4444" fill="#ef4444" name="Terc. Express" fillOpacity={0.6} />
+                    <Area type="monotone" dataKey="correios" stackId="1" stroke="#3b82f6" fill="#3b82f6" name="Correios" fillOpacity={0.6} />
+                  </AreaChart>
+                </ChartWrapper>
+             </div>
+             
+             <div className="bg-gray-900 p-6 rounded-2xl border border-gray-800">
+                <h2 className="text-red-500 font-bold italic mb-4 uppercase tracking-wider flex justify-between items-center text-[10px]">
+                  <span>PESO LOGÍSTICO (% SOBRE FATURAMENTO)</span>
+                  <span className="text-[8px] text-gray-500 font-mono font-normal">Eficiência em Tempo Real</span>
+                </h2>
+                <ChartWrapper height={200}>
+                  <ComposedChart data={custos.map((c: any, idx: number) => ({ 
+                    mes: c.mes, 
+                    perc: (metas[idx]?.r2026 > 0) ? (((c.zmExpress + c.tercExpress + c.correios) / metas[idx].r2026) * 100) : 0 
+                  }))}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
+                    <XAxis dataKey="mes" stroke="#666" fontSize={10} />
+                    <YAxis stroke="#666" fontSize={10} domain={[0, 'auto']} tickFormatter={v => `${v.toFixed(1)}%`} />
+                    <Tooltip formatter={(v: number) => `${v.toFixed(2)}%`} contentStyle={{ backgroundColor: '#000', border: '1px solid #333', fontSize: '10px' }} />
+                    <Bar dataKey="perc" fill="#ef4444" name="Peso Logístico" radius={[2, 2, 0, 0]} />
+                    <Line type="monotone" dataKey="perc" stroke="#fff" strokeWidth={1} dot={{ r: 2 }} />
+                  </ComposedChart>
+                </ChartWrapper>
+                <div className="mt-4 flex flex-col gap-2">
+                   <div className="flex justify-between items-center">
+                     <span className="text-[9px] text-gray-500 font-bold">ALVO DE EFICIÊNCIA</span>
+                     <span className="text-[9px] text-emerald-500 font-black tracking-widest">&lt; 5.0%</span>
+                   </div>
+                   <div className="h-1 w-full bg-gray-800 rounded-full overflow-hidden">
+                      <div className="h-full bg-emerald-500" style={{ width: '50%' }}></div>
+                   </div>
+                </div>
+             </div>
            </section>
 
            <section className="bg-gray-900 p-6 rounded-2xl border border-gray-800">
@@ -488,7 +540,7 @@ const App: React.FC = () => {
       {activeTab === 'GESTÃO TOP 20' && (
         <div className="space-y-6 animate-in fade-in duration-500">
            {/* Top Indicators */}
-           <section className="grid grid-cols-4 gap-4">
+           <section className="grid grid-cols-5 gap-4">
               <div className="bg-gray-900 p-6 rounded-2xl border border-gray-800 shadow-xl">
                 <p className="text-[10px] text-gray-400 uppercase font-bold">Meta Anual 2026</p>
                 <p className="text-xl font-black mt-2 text-white">{formatBRL(gestaoTop20.indicadores.meta_anual_2026)}</p>
@@ -504,6 +556,20 @@ const App: React.FC = () => {
               <div className="bg-gray-900 p-6 rounded-2xl border border-gray-800 shadow-xl">
                 <p className="text-[10px] text-gray-400 uppercase font-bold">Target Recuperação</p>
                 <p className="text-xl font-black mt-2 text-emerald-400">{formatBRL(5660172)}</p>
+              </div>
+              <div className="bg-gray-950 p-6 rounded-2xl border border-red-900/50 shadow-xl flex flex-col justify-center items-center">
+                <button 
+                  onClick={() => {
+                    if(confirm("Deseja resetar os dados do Top 20 para o padrão de catálogo? Isso apagará suas edições manuais nesta aba.")) {
+                      localStorage.removeItem('skg-gestao-top20');
+                      window.location.reload();
+                    }
+                  }}
+                  className="w-full h-full text-[10px] font-black text-red-500 uppercase hover:bg-red-950/30 transition-colors flex flex-col items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                  RESTAURAR BASE T20
+                </button>
               </div>
            </section>
 
@@ -561,97 +627,6 @@ const App: React.FC = () => {
                <div className="flex items-center gap-2"><div className="w-3 h-3 bg-[#10b981] rounded"></div> 2026 (Proj)</div>
                <div className="flex items-center gap-2"><div className="w-3 h-3 bg-[#3b82f6] rounded"></div> 2027 (Proj)</div>
                <div className="flex items-center gap-2"><div className="w-3 h-3 bg-[#8b5cf6] rounded"></div> 2028 (Proj)</div>
-             </div>
-           </section>
-
-           {/* Geographic Strategic Map SP */}
-           <section className="bg-gray-900 p-6 rounded-2xl border border-gray-800">
-             <h2 className="text-white font-bold italic mb-6 uppercase text-xl tracking-widest text-emerald-100">Mapa Estratégico & Calor Regional (SP)</h2>
-             
-             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-               {/* Visual Representation */}
-               <div className="bg-gray-950 p-6 rounded-xl border border-gray-800">
-                 <p className="text-xs text-gray-400 mb-4 font-bold uppercase italic">Intensidade de Calor por Distribuição Geográfica</p>
-                 <div className="space-y-4">
-                   {['JUNDIAÍ/VÁRZEA', 'CAMPINAS/RMC', 'ABC/SÃO PAULO', 'INTERIOR/OUTROS'].map(reg => {
-                     const totalRegional = gestaoTop20.clientes
-                       .filter((c: any) => c.regiao === reg)
-                       .reduce((acc: number, c: any) => acc + (c.projection2026 || 0), 0);
-                     
-                     let colorClass = 'bg-emerald-500';
-                     let intensityLabel = '🔵 MONITORAMENTO';
-                     let barColor = 'bg-emerald-600';
-
-                     if (totalRegional > 1500000) {
-                       intensityLabel = '🔴 CRÍTICO';
-                       barColor = 'bg-red-600';
-                     } else if (totalRegional >= 800000) {
-                       intensityLabel = '🟠 FORTE PRESENÇA';
-                       barColor = 'bg-orange-500';
-                     } else if (totalRegional >= 400000) {
-                       intensityLabel = '🟡 OPORTUNIDADE';
-                       barColor = 'bg-amber-400';
-                     } else {
-                       intensityLabel = '🔵 MONITORAMENTO';
-                       barColor = 'bg-emerald-500';
-                     }
-
-                     const maxRegional = 3000000; // Reference for bar width
-                     const widthPerc = Math.min(100, (totalRegional / maxRegional) * 100);
-
-                     return (
-                       <div key={reg} className="space-y-1">
-                         <div className="flex justify-between text-[10px] items-end">
-                           <span className="text-white font-black">{reg}</span>
-                           <span className="text-gray-400 font-mono">{formatBRL(totalRegional)} <span className="ml-2 font-bold">{intensityLabel}</span></span>
-                         </div>
-                         <div className="h-2 w-full bg-gray-800 rounded-full overflow-hidden">
-                           <div className={`h-full ${barColor} shadow-[0_0_10px_rgba(255,255,255,0.1)] transition-all duration-1000`} style={{ width: `${widthPerc}%` }}></div>
-                         </div>
-                       </div>
-                     );
-                   })}
-                 </div>
-                 
-                 <div className="mt-8 grid grid-cols-4 gap-2 text-[8px] text-center font-bold">
-                   <div className="flex flex-col items-center gap-1"><div className="w-4 h-2 bg-red-600 rounded-sm"></div> 🔴 &gt; 1.5M</div>
-                   <div className="flex flex-col items-center gap-1"><div className="w-4 h-2 bg-orange-500 rounded-sm"></div> 🟠 800k-1.5M</div>
-                   <div className="flex flex-col items-center gap-1"><div className="w-4 h-2 bg-amber-400 rounded-sm"></div> 🟡 400k-800k</div>
-                   <div className="flex flex-col items-center gap-1"><div className="w-4 h-2 bg-emerald-500 rounded-sm"></div> 🔵 &lt; 400k</div>
-                 </div>
-               </div>
-
-               {/* Ranking Regional */}
-               <div className="bg-gray-950 p-6 rounded-xl border border-gray-800 flex flex-col justify-between">
-                 <div>
-                    <h3 className="text-white font-bold text-sm mb-4 border-l-4 border-emerald-500 pl-3">Ranking de Densidade Faturamento</h3>
-                    <div className="space-y-3">
-                      {['JUNDIAÍ/VÁRZEA', 'CAMPINAS/RMC', 'ABC/SÃO PAULO', 'INTERIOR/OUTROS']
-                        .map(reg => ({
-                          reg,
-                          total: gestaoTop20.clientes
-                            .filter((c: any) => c.regiao === reg)
-                            .reduce((acc: number, c: any) => acc + (c.projection2026 || 0), 0)
-                        }))
-                        .sort((a, b) => b.total - a.total)
-                        .map((item, idx) => (
-                          <div key={item.reg} className="flex items-center gap-4 bg-gray-900/50 p-3 rounded-lg border border-gray-800/50">
-                            <span className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-black ${idx === 0 ? 'bg-amber-500 text-black' : 'bg-gray-800 text-gray-400'}`}>
-                              {idx + 1}
-                            </span>
-                            <div className="flex-1">
-                              <p className="text-white font-bold text-xs">{item.reg}</p>
-                              <p className="text-[10px] text-gray-500">{gestaoTop20.clientes.filter((c: any) => c.regiao === item.reg).length} Clientes Ativos</p>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-white font-mono font-black text-sm">{formatBRL(item.total)}</p>
-                              <p className="text-[9px] text-blue-400 font-bold italic">{( (item.total / (gestaoTop20.clientes.reduce((acc: number, c: any) => acc + (c.projection2026 || 0), 0) || 1)) * 100 ).toFixed(1)}% do Mix</p>
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-                 </div>
-               </div>
              </div>
            </section>
 

@@ -59,7 +59,7 @@ export interface GestaoTop20Client {
   id: number;
   nome: string;
   cidade: string;
-  regiao: 'JUNDIAÍ/VÁRZEA' | 'CAMPINAS/RMC' | 'ABC/SÃO PAULO' | 'INTERIOR/OUTROS';
+  cluster: 'Jundiaí' | 'RMC' | 'Interior Norte' | 'Sorocaba / ABC';
   history: { [year: string]: number };
   projection2026: number;
   projection2027: number;
@@ -133,79 +133,79 @@ export const initialGestaoTop20 = {
       id: 479, 
       nome: 'FERTIPAR BANDEIRANTES LTDA', 
       cidade: 'Campo Limpo Paulista',
-      regiao: 'JUNDIAÍ/VÁRZEA',
+      cluster: 'Jundiaí',
       history: { 2022: 1998042, 2023: 1998042, 2024: 1998042, 2025: 1998042 }, 
       relevancia: 'ESTABILIDADE',
       projection2026: 2167822.24,
       projection2027: 0,
       projection2028: 0,
-      x: 65, y: 75
+      x: 67, y: 72
     },
     { 
       id: 5, 
       nome: 'MACCAFERRI DO BRASIL LTDA', 
       cidade: 'Jundiaí',
-      regiao: 'JUNDIAÍ/VÁRZEA',
+      cluster: 'Jundiaí',
       history: { 2022: 50161, 2023: 104303, 2024: 135998, 2025: 55117 }, 
       relevancia: 'ESTABILIDADE',
       projection2026: 1210300.65,
       projection2027: 0,
       projection2028: 0,
-      x: 63, y: 73
+      x: 63, y: 70
     },
     { 
       id: 218, 
       nome: 'TEX EQUIPAMENTOS ELETRONICOS', 
       cidade: 'Itupeva',
-      regiao: 'JUNDIAÍ/VÁRZEA',
+      cluster: 'Jundiaí',
       history: { 2022: 77266, 2023: 105537, 2024: 121464, 2025: 123224 }, 
       relevancia: 'ESTABILIDADE',
       projection2026: 638778.90,
       projection2027: 0,
       projection2028: 0,
-      x: 60, y: 74
+      x: 61, y: 71
     },
     { 
       id: 8, 
       nome: 'CONFIBRA INDUSTRIA', 
       cidade: 'Hortolândia',
-      regiao: 'CAMPINAS/RMC',
+      cluster: 'RMC',
       history: { 2022: 118144, 2023: 64626, 2024: 45824, 2025: 40630 }, 
       relevancia: 'ESTABILIDADE',
       projection2026: 599352.81,
       projection2027: 0,
       projection2028: 0,
-      x: 55, y: 65
+      x: 56, y: 64
     },
     { 
       id: 260, 
       nome: 'PLASTEK DO BRASIL', 
       cidade: 'Indaiatuba',
-      regiao: 'CAMPINAS/RMC',
+      cluster: 'RMC',
       history: { 2022: 126538, 2023: 52269, 2024: 16275, 2025: 15426 }, 
       relevancia: 'ESTABILIDADE',
       projection2026: 473720.67,
       projection2027: 0,
       projection2028: 0,
-      x: 52, y: 68
+      x: 54, y: 69
     },
     { 
       id: 145, 
       nome: 'CJ DO BRASIL (ALIMENTICIOS)', 
       cidade: 'Piracicaba',
-      regiao: 'CAMPINAS/RMC',
+      cluster: 'Interior Norte',
       history: { 2022: 98068, 2023: 5400, 2024: 228112, 2025: 13353 }, 
       relevancia: 'ALERTA OCIOSIDADE',
       projection2026: 453405.79,
       projection2027: 0,
       projection2028: 0,
-      x: 45, y: 65
+      x: 45, y: 62
     },
     { 
       id: 977, 
       nome: 'FERTIPAR (FILIAL PENÁPOLIS)', 
       cidade: 'Penápolis',
-      regiao: 'INTERIOR/OUTROS',
+      cluster: 'Interior Norte',
       history: { 2022: 0, 2023: 283721, 2024: 108857, 2025: 39015 }, 
       relevancia: 'ESTABILIDADE',
       projection2026: 441525.39,
@@ -217,166 +217,166 @@ export const initialGestaoTop20 = {
       id: 62, 
       nome: 'AQUAGEL REFRIGERACAO', 
       cidade: 'Campinas',
-      regiao: 'CAMPINAS/RMC',
+      cluster: 'RMC',
       history: { 2022: 0, 2023: 108894, 2024: 82968, 2025: 74082 }, 
       relevancia: 'ESTABILIDADE',
       projection2026: 429145.18,
       projection2027: 0,
       projection2028: 0,
-      x: 58, y: 62
+      x: 58, y: 63
     },
     { 
       id: 182, 
       nome: 'AJINOMOTO DO BRASIL', 
       cidade: 'Valparaíso',
-      regiao: 'INTERIOR/OUTROS',
+      cluster: 'Interior Norte',
       history: { 2022: 19467, 2023: 42108, 2024: 55863, 2025: 44257 }, 
       relevancia: 'ALERTA OCIOSIDADE',
       projection2026: 346678.93,
       projection2027: 0,
       projection2028: 0,
-      x: 15, y: 45
+      x: 15, y: 42
     },
     { 
       id: 82, 
       nome: 'PACKDUQUE INDUSTRIA', 
       cidade: 'Valinhos',
-      regiao: 'CAMPINAS/RMC',
+      cluster: 'RMC',
       history: { 2022: 0, 2023: 0, 2024: 0, 2025: 0 }, 
       relevancia: 'ESTABILIDADE',
       projection2026: 343033.40,
       projection2027: 0,
       projection2028: 0,
-      x: 60, y: 68
+      x: 60, y: 65
     },
     { 
       id: 18, 
       nome: 'IGARATIBA IND E COM', 
       cidade: 'Elias Fausto',
-      regiao: 'CAMPINAS/RMC',
+      cluster: 'RMC',
       history: { 2022: 38007, 2023: 51410, 2024: 55703, 2025: 27566 }, 
       relevancia: 'ESTABILIDADE',
       projection2026: 312897.03,
       projection2027: 0,
       projection2028: 0,
-      x: 48, y: 70
+      x: 48, y: 66
     },
     { 
       id: 181, 
       nome: 'PLIMAX IND EMBALAGENS', 
       cidade: 'Itatiba',
-      regiao: 'JUNDIAÍ/VÁRZEA',
+      cluster: 'Jundiaí',
       history: { 2022: 0, 2023: 0, 2024: 0, 2025: 0 }, 
       relevancia: 'ESTABILIDADE',
       projection2026: 271637.82,
       projection2027: 0,
       projection2028: 0,
-      x: 68, y: 65
+      x: 68, y: 66
     },
     { 
       id: 568, 
       nome: 'ITURRI COIMPAR', 
       cidade: 'Indaiatuba',
-      regiao: 'CAMPINAS/RMC',
+      cluster: 'RMC',
       history: { 2022: 71398, 2023: 76670, 2024: 0, 2025: 0 }, 
       relevancia: 'ALERTA OCIOSIDADE',
       projection2026: 248035.81,
       projection2027: 0,
       projection2028: 0,
-      x: 51, y: 69
+      x: 55, y: 70
     },
     { 
       id: 118, 
       nome: 'SIKA S.A .', 
       cidade: 'Itupeva',
-      regiao: 'JUNDIAÍ/VÁRZEA',
+      cluster: 'Jundiaí',
       history: { 2022: 0, 2023: 0, 2024: 0, 2025: 0 }, 
       relevancia: 'ESTABILIDADE',
       projection2026: 226327.47,
       projection2027: 0,
       projection2028: 0,
-      x: 59, y: 73
+      x: 60, y: 72
     },
     { 
       id: 322, 
       nome: 'CLARIOS ENERGY SOLUTIONS', 
       cidade: 'Sorocaba',
-      regiao: 'INTERIOR/OUTROS',
+      cluster: 'Sorocaba / ABC',
       history: { 2022: 48064, 2023: 49474, 2024: 2599, 2025: 3244 }, 
       relevancia: 'ESTABILIDADE',
       projection2026: 212938.25,
       projection2027: 0,
       projection2028: 0,
-      x: 45, y: 85
+      x: 50, y: 78
     },
     { 
       id: 529, 
       nome: 'ELEKEIROZ S/A', 
       cidade: 'Varzea Paulista',
-      regiao: 'JUNDIAÍ/VÁRZEA',
+      cluster: 'Jundiaí',
       history: { 2022: 0, 2023: 0, 2024: 0, 2025: 0 }, 
       relevancia: 'ESTABILIDADE',
       projection2026: 194357.43,
       projection2027: 0,
       projection2028: 0,
-      x: 66, y: 76
+      x: 65, y: 71
     },
     { 
       id: 146, 
       nome: 'USINA ACUCAREIRA ESTER SA', 
       cidade: 'Jundiaí',
-      regiao: 'CAMPINAS/RMC',
+      cluster: 'Jundiaí',
       history: { 2022: 0, 2023: 0, 2024: 0, 2025: 0 }, 
       relevancia: 'ALERTA OCIOSIDADE',
       projection2026: 173640.88,
       projection2027: 0,
       projection2028: 0,
-      x: 62, y: 72
+      x: 64, y: 69
     },
     { 
       id: 53, 
       nome: 'TOYO INK BRASIL LTDA', 
       cidade: 'Jundiaí',
-      regiao: 'JUNDIAÍ/VÁRZEA',
+      cluster: 'Jundiaí',
       history: { 2022: 0, 2023: 0, 2024: 0, 2025: 0 }, 
       relevancia: 'ESTABILIDADE',
       projection2026: 152347.97,
       projection2027: 0,
       projection2028: 0,
-      x: 64, y: 72
+      x: 63, y: 68
     },
     { 
       id: 302, 
       nome: 'MACCAFERRI SKAPS', 
       cidade: 'Campinas',
-      regiao: 'CAMPINAS/RMC',
+      cluster: 'RMC',
       history: { 2022: 0, 2023: 0, 2024: 0, 2025: 0 }, 
       relevancia: 'ALERTA OCIOSIDADE',
       projection2026: 149037.68,
       projection2027: 0,
       projection2028: 0,
-      x: 57, y: 61
+      x: 57, y: 62
     },
     { 
       id: 926, 
       nome: 'PAIS E FILHOS USINAGEM', 
       cidade: 'São Bernardo do Campo',
-      regiao: 'ABC/SÃO PAULO',
+      cluster: 'Sorocaba / ABC',
       history: { 2022: 0, 2023: 0, 2024: 0, 2025: 0 }, 
       relevancia: 'ALERTA OCIOSIDADE',
       projection2026: 134043.27,
       projection2027: 0,
       projection2028: 0,
-      x: 75, y: 88
+      x: 75, y: 82
     },
     { 
       id: 916, 
       nome: 'GLOBAL FLEX INDUSTRIA', 
-      cidade: 'Cosmopolis',
-      regiao: 'CAMPINAS/RMC',
+      cidade: 'Cosmópolis',
+      cluster: 'RMC',
       history: { 2022: 0, 2023: 0, 2024: 0, 2025: 0 }, 
       relevancia: 'ALERTA OCIOSIDADE',
-      projection2026: 122725.00,
+      projection2026: 0,
       projection2027: 0,
       projection2028: 0,
       x: 50, y: 55
