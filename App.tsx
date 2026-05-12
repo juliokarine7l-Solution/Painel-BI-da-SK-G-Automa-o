@@ -50,6 +50,15 @@ const App: React.FC = () => {
   const metaAno = useMemo(() => metas.reduce((acc: any, m: any) => acc + m.meta, 0), [metas]);
   const atingimento = useMemo(() => (metaAno > 0 ? (totalBilling2026 / metaAno) * 100 : 0), [totalBilling2026, metaAno]);
   
+  // Migration: If the old placeholder value is detected in the first client (Fertipar), reset local data automatically
+  useEffect(() => {
+    if (gestaoTop20.clientes?.[0]?.history?.['2022'] === 1998042) {
+      console.log("Stale Fertipar data detected (1998042). Resetting storage...");
+      localStorage.removeItem('skg-gestao-top20');
+      window.location.reload();
+    }
+  }, [gestaoTop20]);
+
   const metaAnualCamozzi = useMemo(() => custos.reduce((acc: any, m: any) => acc + m.metaCamozzi, 0), [custos]);
   const custoTotalCamozzi = useMemo(() => custos.reduce((acc: any, m: any) => acc + m.custoCamozzi, 0), [custos]);
   const custoTotalOutros = useMemo(() => custos.reduce((acc: any, m: any) => acc + m.custoOutros, 0), [custos]);
@@ -441,7 +450,7 @@ const App: React.FC = () => {
                   <p className="text-[10px] text-gray-500 font-bold uppercase mb-1">Total Histórico (22-25)</p>
                   <p className="text-xl font-black text-white font-mono">
                     {formatBRL(gestaoTop20.clientes.slice(0, 10).reduce((acc: number, c: any) => 
-                      acc + Object.values(c.history).reduce((a: any, b: any) => a + b, 0), 0
+                      acc + (Object.values(c.history) as number[]).reduce((a, b) => a + b, 0), 0
                     ))}
                   </p>
                 </div>
@@ -531,7 +540,20 @@ const App: React.FC = () => {
           <section className="bg-gray-900 p-8 rounded-3xl border border-gray-800 shadow-xl overflow-hidden">
              <div className="flex justify-between items-center mb-8">
                <h3 className="text-white font-black italic text-xl uppercase italic">Lançamento de Dados & Status de Estabilidade</h3>
-               <button onClick={handleSave} className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-full font-black text-xs transition-colors shadow-lg shadow-emerald-900/20">SALVAR ALTERAÇÕES</button>
+               <div className="flex gap-2">
+                 <button 
+                   onClick={() => {
+                     if(confirm("Deseja resetar o Top 20 para os valores reais do catálogo?")) {
+                       localStorage.removeItem('skg-gestao-top20');
+                       window.location.reload();
+                     }
+                   }}
+                   className="bg-gray-800 hover:bg-gray-700 text-red-500 px-4 py-2 rounded-full font-black text-[10px] transition-all border border-red-900/30"
+                 >
+                   RESTAURAR BASE
+                 </button>
+                 <button onClick={handleSave} className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-full font-black text-xs transition-colors shadow-lg shadow-emerald-900/20">SALVAR ALTERAÇÕES</button>
+               </div>
              </div>
 
              <div className="overflow-x-auto">
