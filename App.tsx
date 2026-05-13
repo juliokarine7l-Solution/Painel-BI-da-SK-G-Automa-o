@@ -50,10 +50,15 @@ const App: React.FC = () => {
   const metaAno = useMemo(() => metas.reduce((acc: any, m: any) => acc + m.meta, 0), [metas]);
   const atingimento = useMemo(() => (metaAno > 0 ? (totalBilling2026 / metaAno) * 100 : 0), [totalBilling2026, metaAno]);
   
-  // Migration: If the old placeholder value is detected in the first client (Fertipar), reset local data automatically
+  // Migration: Reset local data if stale or incorrect
   useEffect(() => {
-    if (gestaoTop20.clientes?.[0]?.history?.['2022'] === 1998042) {
-      console.log("Stale Fertipar data detected (1998042). Resetting storage...");
+    const clients = gestaoTop20.clientes || [];
+    const isStaleFertipar = clients[0]?.history?.['2022'] === 1998042;
+    const hasIturriInTop10 = clients.slice(0, 10).some((c: any) => c.nome.includes('ITURRI'));
+    const hasPackduqueInTop10 = clients.slice(0, 10).some((c: any) => c.nome.includes('PACKDUQUE'));
+    
+    if (isStaleFertipar || hasIturriInTop10 || hasPackduqueInTop10) {
+      console.log("Stale client data detected (Iturri or Packduque in Top 10). Resetting storage...");
       localStorage.removeItem('skg-gestao-top20');
       window.location.reload();
     }

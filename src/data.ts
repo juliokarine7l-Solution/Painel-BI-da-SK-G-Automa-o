@@ -142,18 +142,6 @@ export const initialGestaoTop20 = {
       x: 67, y: 72
     },
     { 
-      id: 5, 
-      nome: 'MACCAFERRI DO BRASIL LTDA', 
-      cidade: 'Jundiaí',
-      cluster: 'Jundiaí',
-      history: { 2022: 50161.64, 2023: 104303.31, 2024: 135998.77, 2025: 55117.22 }, 
-      relevancia: 'ESTABILIDADE',
-      projection2026: 1210300.65,
-      projection2027: 0,
-      projection2028: 0,
-      x: 63, y: 70
-    },
-    { 
       id: 218, 
       nome: 'TEX EQUIPAMENTOS ELETRONICOS', 
       cidade: 'Itupeva',
@@ -164,6 +152,18 @@ export const initialGestaoTop20 = {
       projection2027: 0,
       projection2028: 0,
       x: 61, y: 71
+    },
+    { 
+      id: 5, 
+      nome: 'MACCAFERRI DO BRASIL LTDA', 
+      cidade: 'Jundiaí',
+      cluster: 'Jundiaí',
+      history: { 2022: 50161.64, 2023: 104303.31, 2024: 135998.77, 2025: 55117.22 }, 
+      relevancia: 'ESTABILIDADE',
+      projection2026: 1210300.65,
+      projection2027: 0,
+      projection2028: 0,
+      x: 63, y: 70
     },
     { 
       id: 8, 
@@ -190,18 +190,6 @@ export const initialGestaoTop20 = {
       x: 54, y: 69
     },
     { 
-      id: 145, 
-      nome: 'CJ DO BRASIL (ALIMENTICIOS)', 
-      cidade: 'Piracicaba',
-      cluster: 'Interior Norte',
-      history: { 2022: 98068.89, 2023: 5400.00, 2024: 228112.41, 2025: 13353.50 }, 
-      relevancia: 'ALERTA OCIOSIDADE',
-      projection2026: 453405.79,
-      projection2027: 0,
-      projection2028: 0,
-      x: 45, y: 62
-    },
-    { 
       id: 977, 
       nome: 'FERTIPAR (FILIAL PENÁPOLIS)', 
       cidade: 'Penápolis',
@@ -214,16 +202,16 @@ export const initialGestaoTop20 = {
       x: 20, y: 40
     },
     { 
-      id: 62, 
-      nome: 'AQUAGEL REFRIGERACAO', 
-      cidade: 'Campinas',
-      cluster: 'RMC',
-      history: { 2022: 0, 2023: 108894, 2024: 82968, 2025: 74082 }, 
-      relevancia: 'ESTABILIDADE',
-      projection2026: 429145.18,
+      id: 145, 
+      nome: 'CJ DO BRASIL (ALIMENTICIOS)', 
+      cidade: 'Piracicaba',
+      cluster: 'Interior Norte',
+      history: { 2022: 98068.89, 2023: 5400.00, 2024: 228112.41, 2025: 13353.50 }, 
+      relevancia: 'ALERTA OCIOSIDADE',
+      projection2026: 453405.79,
       projection2027: 0,
       projection2028: 0,
-      x: 58, y: 63
+      x: 45, y: 62
     },
     { 
       id: 182, 
@@ -238,18 +226,6 @@ export const initialGestaoTop20 = {
       x: 15, y: 42
     },
     { 
-      id: 82, 
-      nome: 'PACKDUQUE INDUSTRIA', 
-      cidade: 'Valinhos',
-      cluster: 'RMC',
-      history: { 2022: 0, 2023: 0, 2024: 0, 2025: 0 }, 
-      relevancia: 'ESTABILIDADE',
-      projection2026: 343033.40,
-      projection2027: 0,
-      projection2028: 0,
-      x: 60, y: 65
-    },
-    { 
       id: 18, 
       nome: 'IGARATIBA IND E COM', 
       cidade: 'Elias Fausto',
@@ -260,6 +236,30 @@ export const initialGestaoTop20 = {
       projection2027: 0,
       projection2028: 0,
       x: 48, y: 66
+    },
+    { 
+      id: 322, 
+      nome: 'CLARIOS ENERGY SOLUTIONS', 
+      cidade: 'Sorocaba',
+      cluster: 'Sorocaba / ABC',
+      history: { 2022: 48064.32, 2023: 49474.53, 2024: 2599.36, 2025: 3244.35 }, 
+      relevancia: 'ESTABILIDADE',
+      projection2026: 212938.25,
+      projection2027: 0,
+      projection2028: 0,
+      x: 50, y: 78
+    },
+    { 
+      id: 82, 
+      nome: 'PACKDUQUE INDUSTRIA', 
+      cidade: 'Valinhos',
+      cluster: 'RMC',
+      history: { 2022: 0, 2023: 0, 2024: 0, 2025: 0 }, 
+      relevancia: 'ESTABILIDADE',
+      projection2026: 343033.40,
+      projection2027: 0,
+      projection2028: 0,
+      x: 60, y: 65
     },
     { 
       id: 181, 
@@ -298,16 +298,16 @@ export const initialGestaoTop20 = {
       x: 60, y: 72
     },
     { 
-      id: 322, 
-      nome: 'CLARIOS ENERGY SOLUTIONS', 
-      cidade: 'Sorocaba',
-      cluster: 'Sorocaba / ABC',
-      history: { 2022: 48064.32, 2023: 49474.53, 2024: 2599.36, 2025: 3244.35 }, 
+      id: 62, 
+      nome: 'AQUAGEL REFRIGERACAO', 
+      cidade: 'Campinas',
+      cluster: 'RMC',
+      history: { 2022: 0, 2023: 108894, 2024: 82968, 2025: 74082 }, 
       relevancia: 'ESTABILIDADE',
-      projection2026: 212938.25,
+      projection2026: 429145.18,
       projection2027: 0,
       projection2028: 0,
-      x: 50, y: 78
+      x: 58, y: 63
     },
     { 
       id: 529, 
