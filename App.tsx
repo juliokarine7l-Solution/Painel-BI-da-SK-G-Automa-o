@@ -9,6 +9,45 @@ import { ChartWrapper } from './components/ChartWrapper';
 const formatBRL = (value: number): string => 
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 }).format(value || 0);
 
+const getClienteStatus = (c: any, currentYearBilling: number) => {
+  const h = c.history || {};
+  const historyArray = Object.values(h) as number[];
+  const real2022 = historyArray[0] || h[2022] || 0;
+  const real2023 = historyArray[1] || h[2023] || 0;
+  const real2024 = historyArray[2] || h[2024] || 0;
+  const real2025 = historyArray[3] || h[2025] || 0;
+  
+  const hArr = [real2022, real2023, real2024, real2025];
+  const mediaValue = hArr.reduce((a, b) => a + b, 0) / 4;
+
+  const current = currentYearBilling || 0;
+  
+  const isZero = current === 0;
+  const isDeclining = (real2025 < real2024 && real2024 < real2023) || (real2025 < real2024 && real2025 < 5000) || (real2025 < mediaValue * 0.5);
+  const isVeryLow = real2025 < 5000 && current < 5000;
+  const growthRate = real2025 > 0 ? (current / real2025) - 1 : (current > 0 ? 1 : 0);
+
+  if (isZero) {
+    return { status: 'ALERTA OCIOSIDADE', colorText: 'text-red-500', colorBg: 'bg-red-950', colorBorder: 'border-red-900' };
+  } else if (isDeclining && current < mediaValue * 0.8) {
+    return { status: 'ALERTA RECUO', colorText: 'text-red-500', colorBg: 'bg-red-950', colorBorder: 'border-red-900' };
+  } else if (isDeclining && current >= real2025 && current > 5000) {
+    return { status: 'EM RECUPERAÇÃO', colorText: 'text-amber-400', colorBg: 'bg-amber-950', colorBorder: 'border-amber-900' };
+  } else if (current < mediaValue * 0.7) {
+    return { status: 'ALERTA OCIOSIDADE', colorText: 'text-red-500', colorBg: 'bg-red-950', colorBorder: 'border-red-900' };
+  } else if (growthRate > 0.05 && current > mediaValue * 1.2 && current >= 100000) {
+    return { status: 'TOP PERFORMANCE', colorText: 'text-blue-400', colorBg: 'bg-blue-950', colorBorder: 'border-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]' };
+  } else if (growthRate > 0.05 && !isVeryLow) {
+    return { status: 'EXPANSÃO', colorText: 'text-emerald-400', colorBg: 'bg-emerald-950', colorBorder: 'border-emerald-900' };
+  } else if (Math.abs(growthRate) <= 0.15 && current >= 5000) {
+    return { status: 'ESTABILIDADE', colorText: 'text-gray-400', colorBg: 'bg-gray-900', colorBorder: 'border-gray-800' };
+  } else if (isVeryLow) {
+    return { status: 'BAIXO VOLUME', colorText: 'text-gray-500', colorBg: 'bg-gray-900', colorBorder: 'border-gray-800' };
+  }
+  
+  return { status: 'ESTABILIDADE', colorText: 'text-emerald-400', colorBg: 'bg-emerald-950', colorBorder: 'border-emerald-900' };
+};
+
 export const metaMensal = [
   { month: 'Jan', meta: 142500, r2026: 74919.58, r2027: 0, r2028: 0 },
   { month: 'Fev', meta: 192000, r2026: 128909.00, r2027: 0, r2028: 0 },
@@ -570,23 +609,7 @@ const App: React.FC = () => {
                       const real2024 = c.history[2024] || 0;
                       const real2023 = c.history[2023] || 0;
                       
-                      let status = 'ALERTA OCIOSIDADE';
-                      let statusColor = 'bg-red-950 text-red-400';
-
-                      const growthRate = real2025 > 0 ? (c.projection2026 / real2025) - 1 : (c.projection2026 > 0 ? 1 : 0);
-                      const isDeclining = (real2025 < real2024 && real2024 < real2023) || (real2025 < real2024 && real2025 < 5000);
-                      const isVeryLow = real2025 < 5000 && c.projection2026 < 5000;
-
-                      if (growthRate > 0.05 && !isVeryLow) {
-                        status = 'EXPANSÃO';
-                        statusColor = 'bg-emerald-950 text-emerald-400';
-                      } else if (isDeclining || isVeryLow) {
-                        status = 'ALERTA RECUO';
-                        statusColor = 'bg-red-950 text-red-500 border border-red-900';
-                      } else if (Math.abs(growthRate) <= 0.1 && real2025 > 5000) {
-                        status = 'ESTABILIDADE';
-                        statusColor = 'bg-blue-950 text-blue-400 font-black';
-                      }
+                      const { status, colorBg, colorText, colorBorder } = getClienteStatus(c, c.projection2026 || 0);
 
                       return (
                         <tr key={c.id} className="hover:bg-gray-800/20 transition-colors group">
@@ -619,7 +642,7 @@ const App: React.FC = () => {
                           ))}
 
                           <td className="px-6 py-5 text-center">
-                            <span className={`${statusColor} text-[9px] font-black px-3 py-1 rounded-full whitespace-nowrap`}>
+                            <span className={`${colorBg} ${colorText} ${colorBorder || ''} border text-[9px] font-black px-3 py-1 rounded-full whitespace-nowrap`}>
                               {status}
                             </span>
                           </td>
@@ -857,18 +880,9 @@ const App: React.FC = () => {
                      const mediaValue = historyArray.length > 0 ? historyArray.reduce((a, b) => a + b, 0) / historyArray.length : 0;
                      
                      // Dynamic Status Logic
-                     const currentBilling = (gestaoTop20.indicadores.selectedYear === '2026' ? c.projection2026 : (gestaoTop20.indicadores.selectedYear === '2027' ? c.projection2027 : c.projection2028)) || 0;
+                     const currentBilling = (selectedYear === '2026' ? (c.projection2026 || 0) : (selectedYear === '2027' ? (c.projection2027 || 0) : (c.projection2028 || 0)));
                      
-                     let status = 'ESTABILIDADE';
-                     let statusColor = 'text-emerald-400';
-                     
-                     if (currentBilling > mediaValue * 1.3) {
-                       status = 'TOP PERFORMANCE';
-                       statusColor = 'text-blue-400';
-                     } else if (currentBilling < mediaValue * 0.7) {
-                       status = 'ALERTA OCIOSIDADE';
-                       statusColor = 'text-red-500';
-                     }
+                     const { status, colorBg, colorText, colorBorder } = getClienteStatus(c, currentBilling);
 
                      return (
                        <tr key={c.id} className="border-b border-gray-800 hover:bg-gray-800/30 transition-colors">
@@ -901,7 +915,7 @@ const App: React.FC = () => {
                            </td>
                          ))}
                          <td className="px-4 py-3 text-center">
-                           <span className={`px-2 py-1 rounded-full text-[10px] font-black border ${statusColor.replace('text', 'border')} ${statusColor} bg-gray-900`}>
+                           <span className={`px-2 py-1 rounded-full text-[10px] font-black border ${colorBg} ${colorText} ${colorBorder || ''}`}>
                              {status}
                            </span>
                          </td>
