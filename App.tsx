@@ -51,18 +51,6 @@ const App: React.FC = () => {
   const atingimento = useMemo(() => (metaAno > 0 ? (totalBilling2026 / metaAno) * 100 : 0), [totalBilling2026, metaAno]);
   
   // Migration: Reset local data if stale or incorrect
-  useEffect(() => {
-    const clients = gestaoTop20.clientes || [];
-    const isStaleFertipar = clients[0]?.history?.['2022'] === 1998042;
-    const hasIturriInTop10 = clients.slice(0, 10).some((c: any) => c.nome.includes('ITURRI'));
-    const hasPackduqueInTop10 = clients.slice(0, 10).some((c: any) => c.nome.includes('PACKDUQUE'));
-    
-    if (isStaleFertipar || hasIturriInTop10 || hasPackduqueInTop10) {
-      console.log("Stale client data detected (Iturri or Packduque in Top 10). Resetting storage...");
-      localStorage.removeItem('skg-gestao-top20');
-      window.location.reload();
-    }
-  }, [gestaoTop20]);
 
   const metaAnualCamozzi = useMemo(() => custos.reduce((acc: any, m: any) => acc + m.metaCamozzi, 0), [custos]);
   const custoTotalCamozzi = useMemo(() => custos.reduce((acc: any, m: any) => acc + m.custoCamozzi, 0), [custos]);
@@ -579,9 +567,26 @@ const App: React.FC = () => {
                       const hist = Object.values(c.history) as number[];
                       const avg = hist.reduce((a, b) => a + b, 0) / (hist.length || 1);
                       const real2025 = c.history[2025] || 0;
+                      const real2024 = c.history[2024] || 0;
+                      const real2023 = c.history[2023] || 0;
                       
-                      const isGrowing = c.projection2026 > real2025;
-                      const isStable = Math.abs((c.projection2026 / (real2025 || 1)) - 1) < 0.1;
+                      let status = 'ALERTA OCIOSIDADE';
+                      let statusColor = 'bg-red-950 text-red-400';
+
+                      const growthRate = real2025 > 0 ? (c.projection2026 / real2025) - 1 : (c.projection2026 > 0 ? 1 : 0);
+                      const isDeclining = (real2025 < real2024 && real2024 < real2023) || (real2025 < real2024 && real2025 < 5000);
+                      const isVeryLow = real2025 < 5000 && c.projection2026 < 5000;
+
+                      if (growthRate > 0.05 && !isVeryLow) {
+                        status = 'EXPANSÃO';
+                        statusColor = 'bg-emerald-950 text-emerald-400';
+                      } else if (isDeclining || isVeryLow) {
+                        status = 'ALERTA RECUO';
+                        statusColor = 'bg-red-950 text-red-500 border border-red-900';
+                      } else if (Math.abs(growthRate) <= 0.1 && real2025 > 5000) {
+                        status = 'ESTABILIDADE';
+                        statusColor = 'bg-blue-950 text-blue-400 font-black';
+                      }
 
                       return (
                         <tr key={c.id} className="hover:bg-gray-800/20 transition-colors group">
@@ -614,13 +619,9 @@ const App: React.FC = () => {
                           ))}
 
                           <td className="px-6 py-5 text-center">
-                            {isGrowing ? (
-                              <span className="bg-emerald-500/10 text-emerald-500 text-[9px] font-black px-3 py-1 rounded-full border border-emerald-500/30">EXPANSÃO</span>
-                            ) : isStable ? (
-                              <span className="bg-amber-500/10 text-amber-500 text-[9px] font-black px-3 py-1 rounded-full border border-amber-500/30">ESTABILIDADE</span>
-                            ) : (
-                              <span className="bg-red-500/10 text-red-500 text-[9px] font-black px-3 py-1 rounded-full border border-red-500/30">OCIOSIDADE</span>
-                            )}
+                            <span className={`${statusColor} text-[9px] font-black px-3 py-1 rounded-full whitespace-nowrap`}>
+                              {status}
+                            </span>
                           </td>
                         </tr>
                       );
