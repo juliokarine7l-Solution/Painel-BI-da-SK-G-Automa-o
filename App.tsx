@@ -1,3 +1,4 @@
+// Update: Fix logic for status colors and Vercel sync (2026-05-15)
 import React, { useState, useMemo, useEffect } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
