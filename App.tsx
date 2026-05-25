@@ -4,8 +4,9 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   ComposedChart, Line, AreaChart, Area 
 } from 'recharts';
-import { initialClients, initialMonthlyData, initialSalespersonData, initialCustosEficiencia, initialGestaoTop20, initialQuarterlyHistory, QuarterlyData } from './src/data';
+import { initialClients, initialMonthlyData, initialSalespersonData, initialCustosEficiencia, initialGestaoTop20, initialQuarterlyHistory, QuarterlyData, initialSalespeopleConfig } from './src/data';
 import { ChartWrapper } from './components/ChartWrapper';
+import { DatabaseManager } from './src/components/DatabaseManager';
 
 const formatBRL = (value: number): string => 
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 }).format(value || 0);
@@ -67,6 +68,7 @@ export const metaMensal = [
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('FATURAMENTO E CUSTOS');
   const [metas, setMetas] = useState(() => JSON.parse(localStorage.getItem('skg-metas') || JSON.stringify(metaMensal)));
+  const [vendedoresConfig, setVendedoresConfig] = useState(() => JSON.parse(localStorage.getItem('skg-vendedores-config') || JSON.stringify(initialSalespeopleConfig)));
   const [vendedorData, setVendedorData] = useState(() => JSON.parse(localStorage.getItem('skg-vendedores') || JSON.stringify(initialSalespersonData['2026'])));
   const [quarterlyHistory, setQuarterlyHistory] = useState<QuarterlyData[]>(() => JSON.parse(localStorage.getItem('skg-quarterly') || JSON.stringify(initialQuarterlyHistory)));
   const [custos, setCustos] = useState(() => JSON.parse(localStorage.getItem('skg-custos') || JSON.stringify(initialCustosEficiencia)));
@@ -115,6 +117,7 @@ const App: React.FC = () => {
 
   const handleSave = () => {
     localStorage.setItem('skg-metas', JSON.stringify(metas));
+    localStorage.setItem('skg-vendedores-config', JSON.stringify(vendedoresConfig));
     localStorage.setItem('skg-vendedores', JSON.stringify(vendedorData));
     localStorage.setItem('skg-quarterly', JSON.stringify(quarterlyHistory));
     localStorage.setItem('skg-custos', JSON.stringify(custos));
@@ -158,14 +161,20 @@ const App: React.FC = () => {
           <h1 className="text-xl font-black italic">SK-G INDUSTRIAL INTELLIGENCE</h1>
         </div>
         <div className="flex gap-2 items-center">
-          {['FATURAMENTO E CUSTOS', 'VENDEDORES', 'DASHBOARD T10', 'GESTÃO TOP 20', 'ANÁLISE TRIMESTRAL'].map(tab => (
+          {['FATURAMENTO E CUSTOS', 'VENDEDORES', 'DASHBOARD T10', 'GESTÃO TOP 20', 'ANÁLISE TRIMESTRAL', 'BANCO DE DADOS (PLANILHAS)'].map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)} className={`px-4 py-2 text-xs font-bold rounded ${activeTab === tab ? 'bg-white text-red-700' : 'bg-red-900/50 text-white hover:bg-red-900'}`}>{tab}</button>
           ))}
-          <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="bg-red-900 text-white font-bold p-2 rounded">
-             <option value="2026">2026</option>
-             <option value="2027">2027</option>
-             <option value="2028">2028</option>
-          </select>
+          {(() => {
+            const availableYears = Object.keys(metas[0] || {})
+               .filter(k => k.startsWith('r20'))
+               .map(k => k.replace('r', ''));
+            
+            return (
+              <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="bg-red-900 text-white font-bold p-2 rounded">
+                {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            );
+          })()}
           <button onClick={handleSave} className="bg-green-600 text-white px-4 py-2 rounded font-bold hover:bg-green-700 flex items-center gap-2">💾 SALVAR LANÇAMENTOS</button>
         </div>
       </header>
@@ -254,7 +263,7 @@ const App: React.FC = () => {
                 <ChartWrapper height={200}>
                   <ComposedChart data={custos.map((c: any, idx: number) => ({ 
                     mes: c.mes, 
-                    perc: (metas[idx]?.r2026 > 0) ? (((c.zmExpress + c.tercExpress + c.correios) / metas[idx].r2026) * 100) : 0 
+                    perc: (c.faturamento > 0) ? (((c.zmExpress + c.tercExpress + c.correios) / c.faturamento) * 100) : 0 
                   }))}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
                     <XAxis dataKey="mes" stroke="#666" fontSize={10} />
@@ -276,60 +285,7 @@ const App: React.FC = () => {
              </div>
            </section>
 
-           <section className="bg-gray-900 p-6 rounded-2xl border border-gray-800">
-              <h2 className="text-white font-bold italic mb-4">ANÁLISE DETALHADA E LANÇAMENTOS</h2>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm text-gray-300">
-                  <thead className="text-xs uppercase bg-gray-800 text-gray-400">
-                    <tr>
-                      <th className="px-4 py-3">Mês</th>
-                      <th className="px-4 py-3">Faturamento</th>
-                      <th className="px-4 py-3">Matéria-Prima (Camozzi)</th>
-                      <th className="px-4 py-3">ZM Express</th>
-                      <th className="px-4 py-3">Terc. Express</th>
-                      <th className="px-4 py-3">Correios</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {custos.map((m: any, idx: number) => (
-                      <tr key={idx} className="border-b border-gray-800">
-                        <td className="px-4 py-3 font-bold">{m.mes}</td>
-                        <td className="px-4 py-3">
-                            <input 
-                                type="text" 
-                                value={formatBRL(metas[idx]?.r2026 || 0)} 
-                                onChange={(e) => {
-                                 const rawValue = e.target.value.replace(/[R$\s.]/g, '').replace(',', '.');
-                                 const val = parseFloat(rawValue) || 0;
-                                 setMetas(prev => prev.map((item, i) => i === idx ? {...item, r2026: val} : item));
-                               }}
-                               className="bg-gray-800 border border-gray-700 rounded px-2 py-1 w-full text-right"
-                             />
-                        </td>
-                        {[
-                          {key: 'materiaPrima', setter: (val: number) => setCustos(prev => prev.map((item, i) => i === idx ? {...item, materiaPrima: val} : item))},
-                          {key: 'zmExpress', setter: (val: number) => setCustos(prev => prev.map((item, i) => i === idx ? {...item, zmExpress: val} : item))},
-                          {key: 'tercExpress', setter: (val: number) => setCustos(prev => prev.map((item, i) => i === idx ? {...item, tercExpress: val} : item))},
-                          {key: 'correios', setter: (val: number) => setCustos(prev => prev.map((item, i) => i === idx ? {...item, correios: val} : item))},
-                        ].map(({key, setter}) => (
-                           <td key={key} className="px-4 py-3">
-                             <input 
-                               type="text" 
-                               value={formatBRL(m[key])} 
-                               onChange={(e) => {
-                                 const rawValue = e.target.value.replace(/[R$\s.]/g, '').replace(',', '.');
-                                 setter(parseFloat(rawValue) || 0);
-                               }}
-                               className="bg-gray-800 border border-gray-700 rounded px-2 py-1 w-full text-right"
-                             />
-                           </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-           </section>
+
         </div>
       )}
 
@@ -338,15 +294,11 @@ const App: React.FC = () => {
            {/* Section 1: Visual Performance Cards */}
            <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
              {(() => {
-                const salespeople = [
-                  { id: 'Syllas', label: 'SYLLAS (DIR.)', meta: 1389500, color: '#10b981' },
-                  { id: 'V1', label: 'VENDEDORA 01', meta: 465000, color: '#3b82f6' },
-                  { id: 'V2', label: 'VENDEDORA 02', meta: 339000, color: '#ef4444' }
-                ];
+                const salespeople = vendedoresConfig;
 
-                const totalMetaEmpresa = salespeople.reduce((acc, s) => acc + s.meta, 0);
+                const totalMetaEmpresa = salespeople.reduce((acc: any, s: any) => acc + s.meta, 0);
 
-                return salespeople.map(s => {
+                return salespeople.map((s: any) => {
                   const totalRealizado = vendedorData.reduce((acc: number, m: any) => acc + (m[s.id] || 0), 0);
                   const percAtingimento = s.meta > 0 ? (totalRealizado / s.meta) * 100 : 0;
                   
@@ -432,40 +384,7 @@ const App: React.FC = () => {
              })()}
            </section>
 
-           <section className="bg-gray-900 p-6 rounded-2xl border border-gray-800">
-             <h2 className="text-white font-bold italic mb-4">LANÇAMENTO DE FATURAMENTO MENSAL - {selectedYear}</h2>
-             <div className="overflow-x-auto">
-               <table className="w-full text-left text-sm text-gray-300">
-                 <thead className="text-xs uppercase bg-gray-800 text-gray-400">
-                   <tr>
-                     <th className="px-6 py-3">Mês</th>
-                     {Object.keys(vendedorData[0]).filter(k => k !== 'month').map(v => <th key={v} className="px-6 py-3">{v} (R$)</th>)}
-                   </tr>
-                 </thead>
-                 <tbody>
-                   {vendedorData.map((m: any, idx: number) => (
-                     <tr key={idx} className="border-b border-gray-800">
-                       <td className="px-6 py-4 font-bold">{m.month}</td>
-                       {Object.keys(m).filter(k => k !== 'month').map((vendedor) => (
-                          <td key={vendedor} className="px-6 py-4">
-                            <input 
-                              type="text" 
-                              value={typeof m[vendedor] === 'number' ? formatBRL(m[vendedor]) : m[vendedor]} 
-                              onChange={(e) => {
-                                const rawValue = e.target.value.replace(/[R$\s.]/g, '').replace(',', '.');
-                                const val = parseFloat(rawValue) || 0;
-                                setVendedorData(prev => prev.map((item: any, i: number) => i === idx ? {...item, [vendedor]: val} : item));
-                              }}
-                              className="bg-gray-800 border border-gray-700 rounded px-2 py-1 w-full text-right"
-                            />
-                          </td>
-                       ))}
-                     </tr>
-                   ))}
-                 </tbody>
-               </table>
-             </div>
-           </section>
+
         </div>
       )}
 
@@ -569,91 +488,7 @@ const App: React.FC = () => {
             </div>
           </section>
 
-          {/* Section 2: Tabela Comparativa de Lançamento */}
-          <section className="bg-gray-900 p-8 rounded-3xl border border-gray-800 shadow-xl overflow-hidden">
-             <div className="flex justify-between items-center mb-8">
-               <h3 className="text-white font-black italic text-xl uppercase italic">Lançamento de Dados & Status de Estabilidade</h3>
-               <div className="flex gap-2">
-                 <button 
-                   onClick={() => {
-                     if(confirm("Deseja resetar o Top 20 para os valores reais do catálogo?")) {
-                       localStorage.removeItem('skg-gestao-top20');
-                       window.location.reload();
-                     }
-                   }}
-                   className="bg-gray-800 hover:bg-gray-700 text-red-500 px-4 py-2 rounded-full font-black text-[10px] transition-all border border-red-900/30"
-                 >
-                   RESTAURAR BASE
-                 </button>
-                 <button onClick={handleSave} className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-full font-black text-xs transition-colors shadow-lg shadow-emerald-900/20">SALVAR ALTERAÇÕES</button>
-               </div>
-             </div>
 
-             <div className="overflow-x-auto">
-               <table className="w-full text-left">
-                  <thead>
-                    <tr className="border-b border-gray-800 text-[10px] text-gray-500 font-black uppercase tracking-widest">
-                       <th className="px-6 py-4">Cliente / Grupo Industrial</th>
-                       <th className="px-6 py-4 text-center">Média Hist. (22-25)</th>
-                       <th className="px-6 py-4 text-center">Real 2025</th>
-                       <th className="px-6 py-4 text-center">Proj/Real 2026</th>
-                       <th className="px-6 py-4 text-center">Proj 2027</th>
-                       <th className="px-6 py-4 text-center">Proj 2028</th>
-                       <th className="px-6 py-4 text-center">Trend Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-800/50">
-                    {gestaoTop20.clientes.slice(0, 10).map((c: any, idx: number) => {
-                      const hist = Object.values(c.history) as number[];
-                      const avg = hist.reduce((a, b) => a + b, 0) / (hist.length || 1);
-                      const real2025 = c.history[2025] || 0;
-                      const real2024 = c.history[2024] || 0;
-                      const real2023 = c.history[2023] || 0;
-                      
-                      const { status, colorBg, colorText, colorBorder } = getClienteStatus(c, c.projection2026 || 0);
-
-                      return (
-                        <tr key={c.id} className="hover:bg-gray-800/20 transition-colors group">
-                          <td className="px-6 py-5">
-                            <p className="text-white font-black text-sm uppercase tracking-tighter truncate w-64">{c.nome}</p>
-                            <p className="text-[10px] text-gray-600 font-bold tracking-widest">{c.cidade} | ID: {c.id}</p>
-                          </td>
-                          <td className="px-6 py-5 text-center font-mono text-xs text-gray-400">{formatBRL(avg)}</td>
-                          <td className="px-6 py-5 text-center font-mono text-xs text-gray-500">{formatBRL(real2025)}</td>
-                          
-                          {/* Editable Projection 2026-2028 */}
-                          {[2026, 2027, 2028].map(year => (
-                            <td key={year} className="px-6 py-5">
-                               <input 
-                                 type="text"
-                                 className="bg-gray-950 border border-gray-800 text-right font-mono text-[11px] font-black text-emerald-400 p-2 w-full rounded focus:ring-1 focus:ring-red-500 outline-none transition-all"
-                                 value={c[`projection${year}`] === 0 ? '' : formatBRL(c[`projection${year}`])}
-                                 placeholder="R$ 0,00"
-                                 onChange={(e) => {
-                                   const rawValue = e.target.value.replace(/[R$\s.]/g, '').replace(',', '.');
-                                   const val = parseFloat(rawValue) || 0;
-                                   const pKey = `projection${year}`;
-                                   setGestaoTop20((prev: any) => ({
-                                     ...prev,
-                                     clientes: prev.clientes.map((item: any) => item.id === c.id ? { ...item, [pKey]: val } : item)
-                                   }));
-                                 }}
-                               />
-                            </td>
-                          ))}
-
-                          <td className="px-6 py-5 text-center">
-                            <span className={`${colorBg} ${colorText} ${colorBorder || ''} border text-[9px] font-black px-3 py-1 rounded-full whitespace-nowrap`}>
-                              {status}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-               </table>
-             </div>
-          </section>
         </div>
       )}
 
@@ -667,17 +502,18 @@ const App: React.FC = () => {
                  </p>
               </div>
               <div className="bg-gray-900 p-6 rounded-2xl border border-gray-800 shadow-xl">
-                 <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Total Projetado 2026</p>
+                 <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Total Projetado {selectedYear}</p>
                  <p className="text-2xl font-black text-emerald-400 mt-1">
-                   {formatBRL(quarterlySummaries.find(s => s.year === '2026')?.total || 0)}
+                   {formatBRL(quarterlySummaries.find(s => s.year === selectedYear)?.total || 0)}
                  </p>
               </div>
               <div className="bg-gray-900 p-6 rounded-2xl border border-gray-800 shadow-xl">
-                 <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Growth vs 2025</p>
+                 <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Growth vs Anterior</p>
                  {(() => {
-                   const v2025 = quarterlySummaries.find(s => s.year === '2025')?.total || 1;
-                   const v2026 = quarterlySummaries.find(s => s.year === '2026')?.total || 0;
-                   const diff = ((v2026 / v2025) - 1) * 100;
+                   const prevYear = (parseInt(selectedYear) - 1).toString();
+                   const vPrev = quarterlySummaries.find(s => s.year === prevYear)?.total || 1;
+                   const vCur = quarterlySummaries.find(s => s.year === selectedYear)?.total || 0;
+                   const diff = ((vCur / vPrev) - 1) * 100;
                    return <p className={`text-2xl font-black mt-1 ${diff >= 0 ? 'text-emerald-400' : 'text-red-500'}`}>{diff.toFixed(1)}%</p>
                  })()}
               </div>
@@ -715,55 +551,6 @@ const App: React.FC = () => {
                  </ResponsiveContainer>
               </ChartWrapper>
            </div>
-
-           <section className="bg-gray-900 p-6 rounded-2xl border border-gray-800">
-             <div className="flex justify-between items-center mb-6">
-               <h2 className="text-white font-black italic uppercase text-lg">Histórico de Lançamentos Trimestrais</h2>
-               <div className="flex items-center gap-2">
-                 <span className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></span>
-                 <span className="text-[10px] text-gray-500 font-bold uppercase">Edição Habilitada para 2026</span>
-               </div>
-             </div>
-             
-             <div className="overflow-x-auto">
-               <table className="w-full text-left">
-                 <thead>
-                   <tr className="border-b border-gray-800 text-[10px] text-gray-500 font-black uppercase">
-                     <th className="px-4 py-3">Ano</th>
-                     <th className="px-4 py-3">Trimestre</th>
-                     <th className="px-4 py-3 text-right">Faturamento</th>
-                     <th className="px-4 py-3">Trend</th>
-                   </tr>
-                 </thead>
-                 <tbody className="divide-y divide-gray-800/50">
-                    {quarterlyHistory.slice().reverse().map((d, idx) => (
-                      <tr key={`${d.ano}-${d.trimestre}`} className="hover:bg-gray-800/30 transition-colors group">
-                        <td className="px-4 py-3 text-white font-bold text-sm">{d.ano}</td>
-                        <td className="px-4 py-3 text-gray-400 font-medium text-xs">{d.trimestre} Trimestre</td>
-                        <td className="px-4 py-3 text-right">
-                          {d.ano === 2026 ? (
-                            <div className="flex flex-col items-end">
-                              <span className="font-mono text-xs text-emerald-400 font-bold">{formatBRL(d.faturamento)}</span>
-                              <span className="text-[8px] text-gray-500 uppercase italic">Sincronizado via Mensal</span>
-                            </div>
-                          ) : (
-                            <span className="font-mono text-xs text-gray-400">{formatBRL(d.faturamento)}</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                           <div className="w-24 h-1 bg-gray-800 rounded-full overflow-hidden">
-                              <div 
-                                className={`h-full ${d.ano === 2026 ? 'bg-emerald-500' : 'bg-gray-600'}`} 
-                                style={{ width: `${Math.min(100, (d.faturamento / 700000) * 100)}%` }}
-                              ></div>
-                           </div>
-                        </td>
-                      </tr>
-                    ))}
-                 </tbody>
-               </table>
-             </div>
-           </section>
         </div>
       )}
 
@@ -860,73 +647,7 @@ const App: React.FC = () => {
              </div>
            </section>
 
-           {/* Management T20 Table */}
-           <section className="bg-gray-900 p-6 rounded-2xl border border-gray-800">
-             <h2 className="text-white font-bold italic mb-6">Tabela Mestra de Gestão T20 & Projeções</h2>
-             <div className="overflow-x-auto">
-               <table className="w-full text-left text-sm text-gray-300">
-                 <thead className="text-xs uppercase bg-gray-800 text-gray-400">
-                   <tr>
-                     <th className="px-4 py-3">Cliente / Grupo Industrial</th>
-                     <th className="px-4 py-3 text-center">Média (22-25)</th>
-                     <th className="px-4 py-3 text-center">Lançar 2026</th>
-                     <th className="px-4 py-3 text-center">Lançar 2027</th>
-                     <th className="px-4 py-3 text-center">Lançar 2028</th>
-                     <th className="px-4 py-3 text-center">Status Estabilidade</th>
-                   </tr>
-                 </thead>
-                 <tbody>
-                   {gestaoTop20.clientes.map((c: any, idx: number) => {
-                     const historyArray = Object.values(c.history || {}) as number[];
-                     const mediaValue = historyArray.length > 0 ? historyArray.reduce((a, b) => a + b, 0) / historyArray.length : 0;
-                     
-                     // Dynamic Status Logic
-                     const currentBilling = (selectedYear === '2026' ? (c.projection2026 || 0) : (selectedYear === '2027' ? (c.projection2027 || 0) : (c.projection2028 || 0)));
-                     
-                     const { status, colorBg, colorText, colorBorder } = getClienteStatus(c, currentBilling);
 
-                     return (
-                       <tr key={c.id} className="border-b border-gray-800 hover:bg-gray-800/30 transition-colors">
-                         <td className="px-4 py-3">
-                            <p className="font-bold text-white leading-tight flex items-center gap-1">
-                              {c.nome || 'Cliente Sem Nome'}
-                              <span className="text-blue-500 text-[8px]">[T20]</span>
-                            </p>
-                            <p className="text-[10px] text-gray-500">ID: {c.id || 'N/A'}</p>
-                         </td>
-                         <td className="px-4 py-3 text-center font-mono text-gray-400 text-xs">
-                           {formatBRL(mediaValue)}
-                         </td>
-                         {['projection2026', 'projection2027', 'projection2028'].map(pKey => (
-                           <td key={pKey} className="px-4 py-3">
-                             <input 
-                               type="text" 
-                               value={c[pKey] === 0 ? '' : formatBRL(c[pKey])}
-                               placeholder="R$ 0,00"
-                               onChange={(e) => {
-                                 const rawValue = e.target.value.replace(/[R$\s.]/g, '').replace(',', '.');
-                                 const val = parseFloat(rawValue) || 0;
-                                 setGestaoTop20((prev: any) => ({
-                                   ...prev,
-                                   clientes: prev.clientes.map((item: any, i: number) => i === idx ? { ...item, [pKey]: val } : item)
-                                 }));
-                               }}
-                               className="bg-gray-800 border border-gray-700 rounded px-2 py-1 w-28 text-right font-mono text-xs focus:ring-1 focus:ring-red-500 outline-none"
-                             />
-                           </td>
-                         ))}
-                         <td className="px-4 py-3 text-center">
-                           <span className={`px-2 py-1 rounded-full text-[10px] font-black border ${colorBg} ${colorText} ${colorBorder || ''}`}>
-                             {status}
-                           </span>
-                         </td>
-                       </tr>
-                     );
-                   })}
-                 </tbody>
-               </table>
-             </div>
-           </section>
 
            {/* Opportunity Cost Insight */}
            <section className="bg-gray-900 p-8 rounded-2xl border border-dashed border-red-500/30 flex items-center gap-8">
@@ -947,7 +668,17 @@ const App: React.FC = () => {
            </section>
         </div>
       )}
-
+      
+      {activeTab === 'BANCO DE DADOS (PLANILHAS)' && (
+         <DatabaseManager 
+            vendedoresConfig={vendedoresConfig} setVendedoresConfig={setVendedoresConfig}
+            metas={metas} setMetas={setMetas}
+            vendedorData={vendedorData} setVendedorData={setVendedorData}
+            custos={custos} setCustos={setCustos}
+            quarterlyHistory={quarterlyHistory} setQuarterlyHistory={setQuarterlyHistory}
+            gestaoTop20={gestaoTop20} setGestaoTop20={setGestaoTop20}
+         />
+      )}
 
     </div>
   );
