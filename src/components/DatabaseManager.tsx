@@ -63,6 +63,48 @@ export const DatabaseManager = ({
             <DataGrid title="Planilha: Metas Mensais" data={metas} setData={setMetas} />
             <DataGrid title="Planilha: Lançamentos de Vendedores" data={vendedorData} setData={setVendedorData} />
             <DataGrid title="Planilha: Custos e Logística" data={custos} setData={setCustos} />
+            
+            <div className="bg-gray-900 border border-gray-800 rounded-xl mt-4 overflow-hidden shadow-xl">
+               <h3 className="text-white font-bold p-4 text-base italic border-b border-gray-800">Desempenho Mensal (Matéria-Prima Camozzi)</h3>
+               <div className="overflow-x-auto">
+                 <table className="w-full text-left text-sm text-gray-400">
+                    <thead className="bg-[#1f2937] text-gray-400 text-xs uppercase font-bold">
+                       <tr>
+                          <th className="px-4 py-3">MÊS</th>
+                          <th className="px-4 py-3">META CAMOZZI</th>
+                          <th className="px-4 py-3">REALIZADO</th>
+                          <th className="px-4 py-3">% ATINGIMENTO</th>
+                       </tr>
+                    </thead>
+                    <tbody>
+                       {custos.map((row: any, i: number) => {
+                          const meta = row.metaCamozzi || 0;
+                          const realizado = row.materiaPrima || 0;
+                          let atingimento = "0.00%";
+                          let atingimentoClass = "text-amber-500";
+                          if (meta > 0) {
+                              const perc = (realizado / meta) * 100;
+                              atingimento = perc.toFixed(2) + "%";
+                              if (realizado === 0 && (row.mes !== 'Jan' && row.mes !== 'Fev' && row.mes !== 'Mar' && row.mes !== 'Abr' && row.mes !== 'Mai')) {
+                                  atingimento = "0.00%";
+                                  atingimentoClass = "text-amber-500";
+                              } else {
+                                  atingimentoClass = perc < 50 ? 'text-red-500' : 'text-amber-500';
+                              }
+                          }
+                          return (
+                             <tr key={i} className="border-b border-gray-800 hover:bg-gray-800/50">
+                                <td className="px-4 py-3 font-medium text-white">{row.mes}</td>
+                                <td className="px-4 py-3">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(meta)}</td>
+                                <td className="px-4 py-3 text-white">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(realizado)}</td>
+                                <td className={`px-4 py-3 font-black ${atingimentoClass}`}>{atingimento}</td>
+                             </tr>
+                          );
+                       })}
+                    </tbody>
+                 </table>
+               </div>
+            </div>
             <DataGrid title="Planilha: Histórico Trimestral" data={quarterlyHistory} setData={setQuarterlyHistory} />
             <DataGrid title="Planilha: Gestão Top 20" data={flattenedTop20} setData={setFlattenedTop20} />
 

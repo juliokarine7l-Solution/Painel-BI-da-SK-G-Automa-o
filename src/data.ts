@@ -49,18 +49,18 @@ export const initialSalespeopleConfig = [
 ];
 
 export const initialCustosEficiencia = [
-  { mes: 'Jan', faturamento: 74919.58, materiaPrima: 31344.54, zmExpress: 0, tercExpress: 824.58, correios: 845.58 },
-  { mes: 'Fev', faturamento: 128909.00, materiaPrima: 28093.48, zmExpress: 0, tercExpress: 781.94, correios: 397.56 },
-  { mes: 'Mar', faturamento: 66982.36, materiaPrima: 52293.43, zmExpress: 0, tercExpress: 902.48, correios: 579.19 },
-  { mes: 'Abr', faturamento: 143492.90, materiaPrima: 32994.88, zmExpress: 0, tercExpress: 716.77, correios: 608.74 },
-  { mes: 'Mai', faturamento: 95305.69, materiaPrima: 0, zmExpress: 0, tercExpress: 0, correios: 0 },
-  { mes: 'Jun', faturamento: 0, materiaPrima: 0, zmExpress: 0, tercExpress: 0, correios: 0 },
-  { mes: 'Jul', faturamento: 0, materiaPrima: 0, zmExpress: 0, tercExpress: 0, correios: 0 },
-  { mes: 'Ago', faturamento: 0, materiaPrima: 0, zmExpress: 0, tercExpress: 0, correios: 0 },
-  { mes: 'Set', faturamento: 0, materiaPrima: 0, zmExpress: 0, tercExpress: 0, correios: 0 },
-  { mes: 'Out', faturamento: 0, materiaPrima: 0, zmExpress: 0, tercExpress: 0, correios: 0 },
-  { mes: 'Nov', faturamento: 0, materiaPrima: 0, zmExpress: 0, tercExpress: 0, correios: 0 },
-  { mes: 'Dez', faturamento: 0, materiaPrima: 0, zmExpress: 0, tercExpress: 0, correios: 0 }
+  { mes: 'Jan', faturamento: 74919.58, metaCamozzi: 29287.00, materiaPrima: 26250.08, zmExpress: 0, tercExpress: 824.58, correios: 845.58 },
+  { mes: 'Fev', faturamento: 128909.00, metaCamozzi: 31000.00, materiaPrima: 10383.59, zmExpress: 0, tercExpress: 781.94, correios: 397.56 },
+  { mes: 'Mar', faturamento: 66982.36, metaCamozzi: 34393.00, materiaPrima: 28857.32, zmExpress: 0, tercExpress: 902.48, correios: 579.19 },
+  { mes: 'Abr', faturamento: 143492.90, metaCamozzi: 34367.00, materiaPrima: 22426.32, zmExpress: 0, tercExpress: 716.77, correios: 608.74 },
+  { mes: 'Mai', faturamento: 95305.69, metaCamozzi: 34400.00, materiaPrima: 8226.84, zmExpress: 0, tercExpress: 0, correios: 0 },
+  { mes: 'Jun', faturamento: 0, metaCamozzi: 34383.00, materiaPrima: 0, zmExpress: 0, tercExpress: 0, correios: 0 },
+  { mes: 'Jul', faturamento: 0, metaCamozzi: 34600.00, materiaPrima: 0, zmExpress: 0, tercExpress: 0, correios: 0 },
+  { mes: 'Ago', faturamento: 0, metaCamozzi: 34817.00, materiaPrima: 0, zmExpress: 0, tercExpress: 0, correios: 0 },
+  { mes: 'Set', faturamento: 0, metaCamozzi: 34633.00, materiaPrima: 0, zmExpress: 0, tercExpress: 0, correios: 0 },
+  { mes: 'Out', faturamento: 0, metaCamozzi: 34500.00, materiaPrima: 0, zmExpress: 0, tercExpress: 0, correios: 0 },
+  { mes: 'Nov', faturamento: 0, metaCamozzi: 34333.00, materiaPrima: 0, zmExpress: 0, tercExpress: 0, correios: 0 },
+  { mes: 'Dez', faturamento: 0, metaCamozzi: 29287.00, materiaPrima: 0, zmExpress: 0, tercExpress: 0, correios: 0 }
 ];
 export interface GestaoTop20Client {
   id: number;

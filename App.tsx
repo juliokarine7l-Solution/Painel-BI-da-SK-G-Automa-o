@@ -2,11 +2,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  ComposedChart, Line, AreaChart, Area 
+  ComposedChart, Line, AreaChart, Area, PieChart, Pie, Cell 
 } from 'recharts';
 import { initialClients, initialMonthlyData, initialSalespersonData, initialCustosEficiencia, initialGestaoTop20, initialQuarterlyHistory, QuarterlyData, initialSalespeopleConfig } from './src/data';
 import { ChartWrapper } from './components/ChartWrapper';
 import { DatabaseManager } from './src/components/DatabaseManager';
+import { GaugeChart } from './src/components/GaugeChart';
 
 const formatBRL = (value: number): string => 
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 }).format(value || 0);
@@ -90,7 +91,7 @@ const App: React.FC = () => {
   const [selectedClientT10, setSelectedClientT10] = useState('Consolidado T10');
   const [selectedQuarterAnalysis, setSelectedQuarterAnalysis] = useState('1º');
 
-  // Migrate to exact 2026 meta goal 
+  // Migrate to exact 2026 meta goal and custos structure
   useEffect(() => {
      setMetas((prev: typeof metaMensal) => {
          const currentTotal = prev.reduce((acc, m) => acc + m.meta, 0);
@@ -99,7 +100,33 @@ const App: React.FC = () => {
          }
          return prev;
      });
+     
+     setCustos((prev: any[]) => {
+         if (prev && prev.length > 0 && ('eficiencia' in prev[0] || !('metaCamozzi' in prev[0]))) {
+             return initialCustosEficiencia.map((initItem, idx) => {
+                 const prevItem = prev[idx] || {};
+                 // Keep the newly requested materia prima inputs from initialCustosEficiencia but users could have edited the other fields
+                 return { ...initItem, faturamento: prevItem.faturamento || initItem.faturamento, zmExpress: prevItem.zmExpress || 0, tercExpress: prevItem.tercExpress || 0, correios: prevItem.correios || 0 };
+             });
+         }
+         return prev;
+     });
   }, []);
+
+  useEffect(() => {
+     setCustos((prev: any[]) => {
+         let changed = false;
+         const next = prev.map((c, idx) => {
+             const m = metas[idx];
+             if (m && c.faturamento !== m.r2026) {
+                 changed = true;
+                 return { ...c, faturamento: m.r2026 };
+             }
+             return c;
+         });
+         return changed ? next : prev;
+     });
+  }, [metas]);
 
   const totalBilling2026 = useMemo(() => metas.reduce((acc: any, m: any) => acc + m.r2026, 0), [metas]);
   const metaAno = useMemo(() => metas.reduce((acc: any, m: any) => acc + m.meta, 0), [metas]);
@@ -108,8 +135,9 @@ const App: React.FC = () => {
   // Migration: Reset local data if stale or incorrect
 
   const metaAnualCamozzi = useMemo(() => custos.reduce((acc: any, m: any) => acc + m.metaCamozzi, 0), [custos]);
-  const custoTotalCamozzi = useMemo(() => custos.reduce((acc: any, m: any) => acc + m.custoCamozzi, 0), [custos]);
-  const custoTotalOutros = useMemo(() => custos.reduce((acc: any, m: any) => acc + m.custoOutros, 0), [custos]);
+  const custoTotalCamozzi = useMemo(() => custos.reduce((acc: any, m: any) => acc + m.materiaPrima, 0), [custos]);
+  const custoTotalOutros = useMemo(() => custos.reduce((acc: any, m: any) => acc + (m.zmExpress + m.tercExpress + m.correios), 0), [custos]);
+  const percCamozziGlobal = metaAnualCamozzi > 0 ? (custoTotalCamozzi / metaAnualCamozzi) * 100 : 0;
   
   const quarterlySummaries = useMemo(() => {
     const byYear: Record<string, number> = {};
@@ -197,7 +225,7 @@ const App: React.FC = () => {
            <section className="grid grid-cols-5 gap-4">
               <div className="bg-gray-900 p-6 rounded-2xl border border-gray-800 shadow-xl">
                 <p className="text-[10px] text-gray-400 uppercase font-bold">Meta Anual Camozzi</p>
-                <p className="text-xl font-black mt-2 text-emerald-400">{formatBRL(400000)}</p>
+                <p className="text-xl font-black mt-2 text-emerald-400">{formatBRL(metaAnualCamozzi)}</p>
               </div>
               <div className="bg-gray-900 p-6 rounded-2xl border border-gray-800 shadow-xl">
                 <p className="text-[10px] text-gray-400 uppercase font-bold">Faturamento Total</p>
@@ -209,18 +237,18 @@ const App: React.FC = () => {
               </div>
               <div className="bg-gray-900 p-6 rounded-2xl border border-gray-800 shadow-xl">
                 <p className="text-[10px] text-gray-400 uppercase font-bold">Custo Camozzi</p>
-                <p className="text-xl font-black mt-2 text-red-500">{formatBRL(custos.reduce((a,c) => a + c.materiaPrima, 0))}</p>
+                <p className="text-xl font-black mt-2 text-red-500">{formatBRL(custoTotalCamozzi)}</p>
               </div>
               <div className="bg-gray-900 p-6 rounded-2xl border border-gray-800 shadow-xl">
                 <p className="text-[10px] text-gray-400 uppercase font-bold">Custos Logísticos</p>
-                <p className="text-xl font-black mt-2 text-red-400">{formatBRL(custos.reduce((a: any,c: any) => a + c.zmExpress + c.tercExpress + c.correios, 0))}</p>
+                <p className="text-xl font-black mt-2 text-red-400">{formatBRL(custoTotalOutros)}</p>
               </div>
            </section>
 
-           <section className="grid grid-cols-2 gap-6">
+           <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               <section className="bg-gray-900 p-6 rounded-2xl border border-gray-800">
-                <h2 className="text-emerald-400 font-bold italic mb-4">FATURAMENTO VS META</h2>
-                <ChartWrapper height={300}>
+                <h2 className="text-emerald-400 font-bold italic mb-6">FATURAMENTO VS META</h2>
+                <ChartWrapper height={350}>
                     <ComposedChart data={metas}>
                         <CartesianGrid stroke="#374151" strokeDasharray="3 3"/>
                         <XAxis dataKey="month" stroke="#9ca3af"/>
@@ -231,12 +259,23 @@ const App: React.FC = () => {
                     </ComposedChart>
                 </ChartWrapper>
               </section>
-              <section className="bg-gray-900 p-6 rounded-2xl border border-gray-800">
-                <h2 className="text-red-400 font-bold italic mb-4 uppercase tracking-wider flex justify-between items-center">
-                  <span>CUSTOS: CAMOZZI VS LOGÍSTICA</span>
-                  <span className="text-[10px] text-gray-500 font-mono font-normal">Comparativo Estrutural de Custos</span>
+              
+              <section className="bg-gray-900 p-6 rounded-2xl border border-gray-800 flex flex-col justify-center">
+                <h2 className="text-amber-400 font-bold italic mb-6 uppercase tracking-wider text-center">
+                  ATINGIMENTO META CAMOZZI
                 </h2>
-                <ChartWrapper height={300}>
+                <div className="flex-1 min-h-[300px] flex items-center justify-center">
+                   <GaugeChart value={percCamozziGlobal} />
+                </div>
+              </section>
+           </section>
+
+           <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <section className="bg-gray-900 p-6 rounded-2xl border border-gray-800">
+                <h2 className="text-red-400 font-bold italic mb-6 uppercase tracking-wider flex justify-between items-center">
+                  <span>CAMOZZI VS LOGÍSTICA</span>
+                </h2>
+                <ChartWrapper height={350}>
                   <ComposedChart data={custos}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#333" />
                     <XAxis dataKey="mes" stroke="#aaa" />
@@ -247,33 +286,13 @@ const App: React.FC = () => {
                   </ComposedChart>
                 </ChartWrapper>
               </section>
-           </section>
 
-           <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-             <div className="lg:col-span-2 bg-gray-900 p-6 rounded-2xl border border-gray-800">
-                <h2 className="text-amber-400 font-bold italic mb-4 uppercase tracking-wider flex justify-between items-center text-sm">
-                  <span>COMPOSIÇÃO E TRENDS DE CUSTOS LOGÍSTICOS</span>
-                  <span className="text-[10px] text-gray-500 font-mono font-normal">Análise p/ Modal de Entrega</span>
-                </h2>
-                <ChartWrapper height={250}>
-                  <AreaChart data={custos}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
-                    <XAxis dataKey="mes" stroke="#666" fontSize={12} />
-                    <YAxis stroke="#666" fontSize={10} width={60} tickFormatter={v => formatBRL(v).split(',')[0]} />
-                    <Tooltip formatter={(v: number) => formatBRL(v)} contentStyle={{ backgroundColor: '#000', border: '1px solid #333' }} />
-                    <Area type="monotone" dataKey="zmExpress" stackId="1" stroke="#f59e0b" fill="#f59e0b" name="ZM Express" fillOpacity={0.6} />
-                    <Area type="monotone" dataKey="tercExpress" stackId="1" stroke="#ef4444" fill="#ef4444" name="Terc. Express" fillOpacity={0.6} />
-                    <Area type="monotone" dataKey="correios" stackId="1" stroke="#3b82f6" fill="#3b82f6" name="Correios" fillOpacity={0.6} />
-                  </AreaChart>
-                </ChartWrapper>
-             </div>
-             
              <div className="bg-gray-900 p-6 rounded-2xl border border-gray-800">
-                <h2 className="text-red-500 font-bold italic mb-4 uppercase tracking-wider flex justify-between items-center text-[10px]">
-                  <span>PESO LOGÍSTICO (% SOBRE FATURAMENTO)</span>
-                  <span className="text-[8px] text-gray-500 font-mono font-normal">Eficiência em Tempo Real</span>
+                <h2 className="text-red-500 font-bold italic mb-6 uppercase tracking-wider flex justify-between items-center text-sm">
+                  <span>PESO LOGÍSTICO (% FATURAMENTO)</span>
+                  <span className="text-[10px] text-gray-500 font-mono font-normal">Eficiência em Tempo Real</span>
                 </h2>
-                <ChartWrapper height={200}>
+                <ChartWrapper height={320}>
                   <ComposedChart data={custos.map((c: any, idx: number) => ({ 
                     mes: c.mes, 
                     perc: (c.faturamento > 0) ? (((c.zmExpress + c.tercExpress + c.correios) / c.faturamento) * 100) : 0 
@@ -295,6 +314,26 @@ const App: React.FC = () => {
                       <div className="h-full bg-emerald-500" style={{ width: '50%' }}></div>
                    </div>
                 </div>
+             </div>
+           </section>
+
+           <section className="grid grid-cols-1 gap-8">
+             <div className="bg-gray-900 p-6 rounded-2xl border border-gray-800">
+                <h2 className="text-amber-400 font-bold italic mb-6 uppercase tracking-wider flex justify-between items-center text-sm">
+                  <span>COMPOSIÇÃO E TRENDS DE CUSTOS LOGÍSTICOS</span>
+                  <span className="text-[10px] text-gray-500 font-mono font-normal">Análise p/ Modal de Entrega</span>
+                </h2>
+                <ChartWrapper height={350}>
+                  <AreaChart data={custos}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
+                    <XAxis dataKey="mes" stroke="#666" fontSize={12} />
+                    <YAxis stroke="#666" fontSize={10} width={60} tickFormatter={v => formatBRL(v).split(',')[0]} />
+                    <Tooltip formatter={(v: number) => formatBRL(v)} contentStyle={{ backgroundColor: '#000', border: '1px solid #333' }} />
+                    <Area type="monotone" dataKey="zmExpress" stackId="1" stroke="#f59e0b" fill="#f59e0b" name="ZM Express" fillOpacity={0.6} />
+                    <Area type="monotone" dataKey="tercExpress" stackId="1" stroke="#ef4444" fill="#ef4444" name="Terc. Express" fillOpacity={0.6} />
+                    <Area type="monotone" dataKey="correios" stackId="1" stroke="#3b82f6" fill="#3b82f6" name="Correios" fillOpacity={0.6} />
+                  </AreaChart>
+                </ChartWrapper>
              </div>
            </section>
 
