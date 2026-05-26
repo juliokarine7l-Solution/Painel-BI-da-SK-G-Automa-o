@@ -51,18 +51,18 @@ const getClienteStatus = (c: any, currentYearBilling: number) => {
 };
 
 export const metaMensal = [
-  { month: 'Jan', meta: 142500, r2026: 74919.58, r2027: 0, r2028: 0 },
-  { month: 'Fev', meta: 192000, r2026: 128909.00, r2027: 0, r2028: 0 },
-  { month: 'Mar', meta: 168000, r2026: 66982.35, r2027: 0, r2028: 0 },
-  { month: 'Abr', meta: 168000, r2026: 143492.89, r2027: 0, r2028: 0 },
-  { month: 'Mai', meta: 165000, r2026: 131965.14, r2027: 0, r2028: 0 },
-  { month: 'Jun', meta: 160000, r2026: 0, r2027: 0, r2028: 0 },
-  { month: 'Jul', meta: 187000, r2026: 0, r2027: 0, r2028: 0 },
-  { month: 'Ago', meta: 196000, r2026: 0, r2027: 0, r2028: 0 },
-  { month: 'Set', meta: 206000, r2026: 0, r2027: 0, r2028: 0 },
-  { month: 'Out', meta: 212000, r2026: 0, r2027: 0, r2028: 0 },
-  { month: 'Nov', meta: 218000, r2026: 0, r2027: 0, r2028: 0 },
-  { month: 'Dez', meta: 205000, r2026: 0, r2027: 0, r2028: 0 },
+  { month: 'Jan', meta: 136250.00, r2026: 74919.58, r2027: 0, r2028: 0 },
+  { month: 'Fev', meta: 154416.67, r2026: 128909.00, r2027: 0, r2028: 0 },
+  { month: 'Mar', meta: 163500.00, r2026: 66982.35, r2027: 0, r2028: 0 },
+  { month: 'Abr', meta: 172583.33, r2026: 143492.89, r2027: 0, r2028: 0 },
+  { month: 'Mai', meta: 172583.33, r2026: 131965.14, r2027: 0, r2028: 0 },
+  { month: 'Jun', meta: 163500.00, r2026: 0, r2027: 0, r2028: 0 },
+  { month: 'Jul', meta: 190750.00, r2026: 0, r2027: 0, r2028: 0 },
+  { month: 'Ago', meta: 199833.33, r2026: 0, r2027: 0, r2028: 0 },
+  { month: 'Set', meta: 208916.67, r2026: 0, r2027: 0, r2028: 0 },
+  { month: 'Out', meta: 218000.00, r2026: 0, r2027: 0, r2028: 0 },
+  { month: 'Nov', meta: 227083.33, r2026: 0, r2027: 0, r2028: 0 },
+  { month: 'Dez', meta: 172583.34, r2026: 0, r2027: 0, r2028: 0 },
 ];
 
 const App: React.FC = () => {
@@ -88,6 +88,18 @@ const App: React.FC = () => {
   });
   const [selectedYear, setSelectedYear] = useState('2026');
   const [selectedClientT10, setSelectedClientT10] = useState('Consolidado T10');
+  const [selectedQuarterAnalysis, setSelectedQuarterAnalysis] = useState('1º');
+
+  // Migrate to exact 2026 meta goal 
+  useEffect(() => {
+     setMetas((prev: typeof metaMensal) => {
+         const currentTotal = prev.reduce((acc, m) => acc + m.meta, 0);
+         if (currentTotal !== 2180000) {
+             return prev.map((m, idx) => ({ ...m, meta: metaMensal[idx]?.meta || m.meta }));
+         }
+         return prev;
+     });
+  }, []);
 
   const totalBilling2026 = useMemo(() => metas.reduce((acc: any, m: any) => acc + m.r2026, 0), [metas]);
   const metaAno = useMemo(() => metas.reduce((acc: any, m: any) => acc + m.meta, 0), [metas]);
@@ -573,64 +585,259 @@ const App: React.FC = () => {
       )}
 
       {activeTab === 'ANÁLISE TRIMESTRAL' && (
-        <div className="space-y-6 animate-in fade-in duration-500">
-           <section className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="bg-gray-900 p-6 rounded-2xl border border-gray-800 shadow-xl">
-                 <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Média Histórica (Ano)</p>
-                 <p className="text-2xl font-black text-white mt-1">
-                   {formatBRL(quarterlySummaries.filter(s => s.year !== '2026').reduce((acc, s) => acc + s.total, 0) / (quarterlySummaries.length - 1))}
-                 </p>
-              </div>
-              <div className="bg-gray-900 p-6 rounded-2xl border border-gray-800 shadow-xl">
-                 <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Total Projetado {selectedYear}</p>
-                 <p className="text-2xl font-black text-emerald-400 mt-1">
-                   {formatBRL(quarterlySummaries.find(s => s.year === selectedYear)?.total || 0)}
-                 </p>
-              </div>
-              <div className="bg-gray-900 p-6 rounded-2xl border border-gray-800 shadow-xl">
-                 <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Growth vs Anterior</p>
-                 {(() => {
-                   const prevYear = (parseInt(selectedYear) - 1).toString();
-                   const vPrev = quarterlySummaries.find(s => s.year === prevYear)?.total || 1;
-                   const vCur = quarterlySummaries.find(s => s.year === selectedYear)?.total || 0;
-                   const diff = ((vCur / vPrev) - 1) * 100;
-                   return <p className={`text-2xl font-black mt-1 ${diff >= 0 ? 'text-emerald-400' : 'text-red-500'}`}>{diff.toFixed(1)}%</p>
-                 })()}
-              </div>
-              <div className="bg-gray-900 p-6 rounded-2xl border border-gray-800 shadow-xl">
-                 <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Melhor Trimestre (Hist)</p>
-                 <p className="text-2xl font-black text-white mt-1">
-                   {formatBRL(Math.max(...quarterlyHistory.filter(d => d.ano !== 2026).map(d => d.faturamento)))}
-                 </p>
-              </div>
-           </section>
+        <div className="space-y-8 animate-in slide-in-from-right duration-500">
+           {(() => {
+               // --- 1. ESTRUTURA DE DADOS & CÁLCULOS HISTÓRICOS ---
+               // Historical years (<= 2025)
+               const paramHistYears = [2022, 2023, 2024, 2025];
+               let sumHistTotal = 0;
+               const sumHistQ: Record<string, number> = { '1º': 0, '2º': 0, '3º': 0, '4º': 0 };
+               
+               quarterlyHistory.forEach(d => {
+                   if (paramHistYears.includes(d.ano)) {
+                       sumHistTotal += d.faturamento;
+                       if (sumHistQ[d.trimestre] !== undefined) sumHistQ[d.trimestre] += d.faturamento;
+                   }
+               });
+               
+               // Sazonalidade Histórica (Shares)
+               const sharesQ = { 
+                   '1º': sumHistQ['1º'] / sumHistTotal,
+                   '2º': sumHistQ['2º'] / sumHistTotal,
+                   '3º': sumHistQ['3º'] / sumHistTotal,
+                   '4º': sumHistQ['4º'] / sumHistTotal
+               };
 
-           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <ChartWrapper title="EVOLUÇÃO HISTÓRICA POR ANO (TOTAL)" height={400}>
-                 <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={quarterlySummaries}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                        <XAxis dataKey="year" stroke="#9ca3af" fontSize={12} />
-                        <YAxis tickFormatter={v => `R$${v/1000}k`} stroke="#9ca3af" fontSize={12} width={80} />
-                        <Tooltip formatter={(v: number) => formatBRL(v)} contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '8px' }} />
-                        <Area type="monotone" dataKey="total" fill="#10b981" stroke="#10b981" fillOpacity={0.1} strokeWidth={3} />
-                        <Line type="monotone" dataKey="total" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4 }} />
-                    </ComposedChart>
-                 </ResponsiveContainer>
-              </ChartWrapper>
+               const avgHistQ = {
+                   '1º': sumHistQ['1º'] / paramHistYears.length,
+                   '2º': sumHistQ['2º'] / paramHistYears.length,
+                   '3º': sumHistQ['3º'] / paramHistYears.length,
+                   '4º': sumHistQ['4º'] / paramHistYears.length
+               };
 
-              <ChartWrapper title="DISTRIBUIÇÃO POR TRIMESTRE (ACUMULADO)" height={400}>
-                 <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={quarterlyDistribution}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                        <XAxis dataKey="name" stroke="#9ca3af" fontSize={12} />
-                        <YAxis tickFormatter={v => `R$${v/1000}k`} stroke="#9ca3af" fontSize={12} width={80} />
-                        <Tooltip formatter={(v: number) => formatBRL(v)} contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '8px' }} />
-                        <Bar dataKey="value" fill="#ef4444" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                 </ResponsiveContainer>
-              </ChartWrapper>
-           </div>
+               // --- 2. CÁLCULO DE PROJEÇÃO DE FECHAMENTO (2026) ---
+               const currentYear = parseInt(selectedYear); // Normally 2026
+               const qDataCurrent = quarterlyHistory.filter(d => d.ano === currentYear);
+               
+               let sumCurrentYearFilled = 0;
+               let combinedShareOfFilled = 0;
+
+               const filledStatus: Record<string, boolean> = {};
+
+               const projectionQ: Record<string, number> = { '1º': 0, '2º': 0, '3º': 0, '4º': 0 };
+
+               qDataCurrent.forEach(d => {
+                   if (d.faturamento > 0) {
+                       sumCurrentYearFilled += d.faturamento;
+                       combinedShareOfFilled += sharesQ[d.trimestre as '1º' | '2º' | '3º' | '4º'];
+                       filledStatus[d.trimestre] = true;
+                   }
+               });
+
+               // Se já tem pelo menos um preenchido, projeta o fim de ano
+               const projectedTotalCurrentYear = combinedShareOfFilled > 0 ? (sumCurrentYearFilled / combinedShareOfFilled) : 0;
+
+               ['1º', '2º', '3º', '4º'].forEach(qStr => {
+                   const q = qStr as '1º' | '2º' | '3º' | '4º';
+                   if (filledStatus[q]) {
+                       projectionQ[q] = qDataCurrent.find(d => d.trimestre === q)?.faturamento || 0;
+                   } else {
+                       projectionQ[q] = projectedTotalCurrentYear * sharesQ[q];
+                   }
+               });
+
+               // --- 3. STATUS YOY & FAROL (Meta vs Realizado) ---
+               // Faturamento Histórico vs Atual (Selected Quarter)
+               const chartDataSelectedQ = quarterlyHistory
+                   .filter(d => d.trimestre === selectedQuarterAnalysis && d.ano >= 2022 && d.ano <= currentYear)
+                   .map(d => ({
+                       year: String(d.ano),
+                       realizado: d.faturamento,
+                       metaHistorica: avgHistQ[selectedQuarterAnalysis as '1º' | '2º' | '3º' | '4º']
+                   }));
+                   
+               // For the filled current quarter, see how it compares to last year same quarter
+               const curQData = quarterlyHistory.find(d => d.ano === currentYear && d.trimestre === selectedQuarterAnalysis)?.faturamento || 0;
+               const prevQData = quarterlyHistory.find(d => d.ano === (currentYear - 1) && d.trimestre === selectedQuarterAnalysis)?.faturamento || 0;
+               
+               const yoyQGrowth = prevQData > 0 ? ((curQData / prevQData) - 1) * 100 : 0;
+               const isQNegative = curQData > 0 && yoyQGrowth < 0;
+
+               // --- 4. DESIGN --- 
+               // Distribution Data
+               const dataProjDist = [
+                   { name: '1º Trimestre', real: filledStatus['1º'] ? projectionQ['1º'] : 0, proj: !filledStatus['1º'] ? projectionQ['1º'] : 0 },
+                   { name: '2º Trimestre', real: filledStatus['2º'] ? projectionQ['2º'] : 0, proj: !filledStatus['2º'] ? projectionQ['2º'] : 0 },
+                   { name: '3º Trimestre', real: filledStatus['3º'] ? projectionQ['3º'] : 0, proj: !filledStatus['3º'] ? projectionQ['3º'] : 0 },
+                   { name: '4º Trimestre', real: filledStatus['4º'] ? projectionQ['4º'] : 0, proj: !filledStatus['4º'] ? projectionQ['4º'] : 0 }
+               ];
+
+               // Status Color
+               const currentGoal = metaAno; 
+               const isYearNegative = projectedTotalCurrentYear < currentGoal;
+
+               return (
+                  <>
+                     <section className="bg-[#0a0c10] p-8 rounded-3xl border border-gray-800 shadow-2xl">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4 border-b border-gray-800 pb-6">
+                           <div>
+                              <h2 className="text-white font-black italic text-3xl uppercase tracking-tighter">Sazonalidade e Projeção ({currentYear})</h2>
+                              <p className="text-xs text-gray-500 mt-1 uppercase font-bold italic tracking-widest">Base de Estudo: Histórico vs Alvo de Recuperação</p>
+                           </div>
+                           <div className="bg-gray-950 p-4 rounded-xl border border-gray-800 flex items-center gap-6">
+                               <div className="flex flex-col items-end">
+                                  <p className="text-[10px] text-gray-500 font-bold uppercase mb-1 drop-shadow">Previsão Fechamento ({currentYear})</p>
+                                  <p className={`text-2xl font-black font-mono ${isYearNegative ? 'text-red-500' : 'text-emerald-500'}`}>
+                                    {formatBRL(projectedTotalCurrentYear)}
+                                  </p>
+                               </div>
+                               <div className="w-px h-10 bg-gray-800"></div>
+                               <div className="flex flex-col items-end">
+                                  <p className="text-[10px] text-gray-500 font-bold uppercase mb-1 drop-shadow">Status Projeção vs Meta</p>
+                                  <div className="flex items-center gap-2">
+                                     <span className={`w-3 h-3 rounded-full ${isYearNegative ? 'bg-red-500 animate-pulse' : 'bg-emerald-500'}`}></span>
+                                     <span className={`font-black text-sm uppercase ${isYearNegative ? 'text-red-500' : 'text-emerald-500'}`}>
+                                       {isYearNegative ? 'DÉFICIT (RISCO)' : 'METAS NO RADAR'}
+                                     </span>
+                                  </div>
+                               </div>
+                           </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                           {/* Year Overall Seasonality Analysis */}
+                           <div className="lg:col-span-3 bg-gray-950/50 p-6 rounded-2xl border border-gray-800">
+                               <h3 className="text-white font-black italic mb-6 text-sm uppercase text-gray-400">Curva de Viabilidade (Real vs Projetado)</h3>
+                               <ChartWrapper height={350}>
+                                  <BarChart data={dataProjDist}>
+                                      <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
+                                      <XAxis dataKey="name" stroke="#666" fontSize={11} tick={{ fill: '#888', fontWeight: 'bold' }} />
+                                      <YAxis tickFormatter={v => `R$${(v/1000).toFixed(0)}k`} stroke="#444" fontSize={10} width={80} />
+                                      <Tooltip 
+                                          contentStyle={{ backgroundColor: '#000', border: '1px solid #333' }}
+                                          formatter={(v: number) => formatBRL(v)}
+                                      />
+                                      <Bar dataKey="real" name="Faturamento Realizado (Lançado)" fill="#10b981" radius={[4, 4, 0, 0]} barSize={40} />
+                                      <Bar dataKey="proj" name="Projeção IA Sazonal" fill="#ef4444" opacity={0.6} radius={[4, 4, 0, 0]} barSize={40} />
+                                  </BarChart>
+                               </ChartWrapper>
+                           </div>
+
+                           <div className="bg-gray-900 p-6 rounded-2xl border border-gray-800 flex flex-col">
+                              <h3 className="text-white font-black italic mb-6 text-[10px] tracking-widest uppercase text-gray-500 border-b border-gray-800 pb-2">Diagnóstico de Crescimento</h3>
+                              <div className="space-y-4">
+                                  <div className="bg-gray-950 p-3 rounded-xl border border-gray-800">
+                                     <p className="text-[10px] text-gray-500 font-bold uppercase italic">Meta {currentYear}</p>
+                                     <p className="text-sm font-black text-white mt-1">{formatBRL(currentGoal)}</p>
+                                  </div>
+                                  <div className="bg-gray-950 p-3 rounded-xl border border-gray-800">
+                                     <p className="text-[10px] text-gray-500 font-bold uppercase italic">GAP (Déficit Anual a Recuperar)</p>
+                                     <p className="text-sm font-black text-red-500 mt-1">{formatBRL(Math.max(0, currentGoal - projectedTotalCurrentYear))}</p>
+                                  </div>
+                                  <div className="bg-gray-950 p-3 rounded-xl border border-gray-800">
+                                     <p className="text-[10px] text-gray-500 font-bold uppercase italic">Validação do Semestre (Até Junho)</p>
+                                     {(() => {
+                                         const metaSemestre = metas.slice(0, 6).reduce((acc: any, m: any) => acc + m.meta, 0);
+                                         const realizadoSemestre = metas.slice(0, 6).reduce((acc: any, m: any) => acc + m.r2026, 0);
+                                         const isSemestreNegative = realizadoSemestre < metaSemestre;
+                                         return (
+                                            <>
+                                               <p className="text-xs text-gray-400 mt-1">44,17% da Meta: <span className="font-mono text-white">{formatBRL(metaSemestre)}</span></p>
+                                               <p className="text-xs text-gray-400">Realizado H1: <span className="font-mono text-white">{formatBRL(realizadoSemestre)}</span></p>
+                                               <p className={`text-sm font-black mt-1 ${isSemestreNegative ? 'text-amber-500' : 'text-emerald-500'}`}>
+                                                  Déficit Semestral: {formatBRL(Math.max(0, metaSemestre - realizadoSemestre))}
+                                               </p>
+                                            </>
+                                         );
+                                     })()}
+                                  </div>
+                                  <div className="p-4 bg-red-950/20 border border-red-900/50 rounded-xl mt-4 border-l-4 border-l-red-500">
+                                     <p className="text-[9px] text-emerald-400 font-black uppercase mb-2">💡 O que a IA aponta?</p>
+                                     <p className="text-[11px] text-gray-400 leading-relaxed italic">
+                                        Historicamente, seus trimestres preenchidos ({Object.keys(filledStatus).join(', ')}) costumavam garantir {(combinedShareOfFilled * 100).toFixed(1)}% de fechamento anual. Mantendo o ritmo atual, o ano fechará R$ {(currentGoal - projectedTotalCurrentYear > 0 ? (currentGoal - projectedTotalCurrentYear) / 1000 : 0).toFixed(0)}k abaixo da meta. Junho é um ponto estratégico e sinaliza alerta sobre o fechamento do 1º Semestre.
+                                     </p>
+                                  </div>
+                              </div>
+                           </div>
+                        </div>
+                     </section>
+
+                     {/* YoY Comparativo Isolado */}
+                     <section className="bg-[#0a0c10] p-8 rounded-3xl border border-gray-800 shadow-2xl mt-8">
+                        <div className="flex flex-col md:flex-row justify-between items-center mb-8 border-b border-gray-800 pb-6">
+                           <div>
+                             <h2 className="text-white font-bold italic text-lg uppercase tracking-wider flex items-center gap-2">
+                               🔬 T-RAY: Comparativo Direto na Sazonalidade (YoY)
+                             </h2>
+                             <p className="text-gray-500 text-[10px] uppercase font-bold tracking-widest mt-1">
+                               Análise cruzada de faturamento contra a média histórica
+                             </p>
+                           </div>
+                           <div className="flex items-center gap-3">
+                              <p className="text-[10px] text-gray-500 font-bold uppercase">Filtrar Sazonalidade (T):</p>
+                              <select 
+                                 value={selectedQuarterAnalysis} 
+                                 onChange={(e) => setSelectedQuarterAnalysis(e.target.value)}
+                                 className="bg-gray-950 text-emerald-500 font-black p-3 rounded-xl border border-gray-700 outline-none focus:ring-1 focus:ring-red-500 uppercase text-xs"
+                              >
+                                 <option value="1º">Quarter 1 (Jan-Mar)</option>
+                                 <option value="2º">Quarter 2 (Abr-Jun)</option>
+                                 <option value="3º">Quarter 3 (Jul-Set)</option>
+                                 <option value="4º">Quarter 4 (Out-Dez)</option>
+                              </select>
+                           </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+                           <div className="lg:col-span-2">
+                               <ChartWrapper height={320}>
+                                  <ComposedChart data={chartDataSelectedQ}>
+                                      <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
+                                      <XAxis dataKey="year" stroke="#666" fontSize={11} tick={{ fill: '#888', fontWeight: 'bold' }} />
+                                      <YAxis tickFormatter={v => `R$${(v/1000).toFixed(0)}k`} stroke="#444" fontSize={10} width={80} />
+                                      <Tooltip 
+                                          contentStyle={{ backgroundColor: '#000', border: '1px solid #333' }}
+                                          formatter={(v: number) => formatBRL(v)}
+                                      />
+                                      <Bar dataKey="realizado" name="Faturamento (Real)" fill={isQNegative ? '#ef4444' : '#3b82f6'} radius={[4, 4, 0, 0]} opacity={0.8} barSize={50} />
+                                      <Line type="step" dataKey="metaHistorica" name="Média (Base-Line)" stroke="#10b981" strokeWidth={3} strokeDasharray="5 5" />
+                                  </ComposedChart>
+                               </ChartWrapper>
+                           </div>
+                           <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                               <h3 className="text-white font-black italic mb-6 text-[10px] tracking-widest uppercase text-gray-500 border-b border-gray-800 pb-3">Desempenho: {selectedQuarterAnalysis} Trimestre</h3>
+                               <div className="flex justify-between items-center mb-6">
+                                  <div>
+                                     <p className="text-gray-400 text-xs font-bold uppercase mb-1">Atual ({currentYear})</p>
+                                     <p className="text-white font-black text-xl font-mono">{formatBRL(curQData)}</p>
+                                  </div>
+                                  <div className="text-right">
+                                     <p className="text-gray-500 text-[10px] font-bold uppercase mb-1">Anterior ({currentYear - 1})</p>
+                                     <p className="text-gray-500 font-bold text-sm line-through decoration-red-500/50">{formatBRL(prevQData)}</p>
+                                  </div>
+                               </div>
+                               
+                               <div className={`p-5 rounded-xl border ${curQData > 0 ? (isQNegative ? 'bg-red-950/20 border-red-900/50' : 'bg-emerald-950/20 border-emerald-900/50') : 'bg-gray-950 border-gray-800'}`}>
+                                  <p className="text-[10px] uppercase font-black text-gray-400">Variação YoY ({selectedQuarterAnalysis})</p>
+                                  <p className={`text-4xl font-black mt-2 font-mono ${curQData === 0 ? 'text-gray-500' : isQNegative ? 'text-red-500' : 'text-emerald-500'}`}>
+                                     {curQData === 0 ? '--' : (yoyQGrowth > 0 ? '+' : '') + yoyQGrowth.toFixed(1) + '%'}
+                                  </p>
+                                  {curQData > 0 && (
+                                     <div className="mt-4 pt-4 border-t border-gray-800/50">
+                                        <p className="text-[10px] italic text-gray-400 leading-relaxed uppercase">
+                                           {isQNegative 
+                                            ? `🚨 Gatilho: Investigar as falhas operacionais ou falta de demanda em frente ao ano de Recuperação.`
+                                            : `✅ Sinal Verde: O trimestre foi fortificado em relação ao ano anterior.`}
+                                        </p>
+                                     </div>
+                                  )}
+                               </div>
+                           </div>
+                        </div>
+                     </section>
+                  </>
+               );
+           })()}
         </div>
       )}
 
