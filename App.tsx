@@ -87,6 +87,7 @@ const App: React.FC = () => {
     return initialGestaoTop20;
   });
   const [selectedYear, setSelectedYear] = useState('2026');
+  const [selectedClientT10, setSelectedClientT10] = useState('Consolidado T10');
 
   const totalBilling2026 = useMemo(() => metas.reduce((acc: any, m: any) => acc + m.r2026, 0), [metas]);
   const metaAno = useMemo(() => metas.reduce((acc: any, m: any) => acc + m.meta, 0), [metas]);
@@ -390,105 +391,184 @@ const App: React.FC = () => {
 
       {activeTab === 'DASHBOARD T10' && (
         <div className="space-y-8 animate-in slide-in-from-right duration-500">
-          {/* Section 1: Curva de Evolução Visual (ASCII-Style inspired) */}
-          <section className="bg-[#0a0c10] p-8 rounded-3xl border border-gray-800 shadow-2xl">
-            <div className="flex justify-between items-center mb-10">
-              <div>
-                <h2 className="text-white font-black italic text-3xl uppercase tracking-tighter">DASHBOARD EVOLUTIVO T10</h2>
-                <p className="text-xs text-gray-500 mt-1 uppercase font-bold italic tracking-widest">Análise de Comportamento e Ciclo de Vida (2022-2028)</p>
-              </div>
-              <div className="flex gap-4">
-                <div className="bg-gray-950 p-4 rounded-xl border border-gray-800">
-                  <p className="text-[10px] text-gray-500 font-bold uppercase mb-1">Total Histórico (22-25)</p>
-                  <p className="text-xl font-black text-white font-mono">
-                    {formatBRL(gestaoTop20.clientes.slice(0, 10).reduce((acc: number, c: any) => 
-                      acc + (Object.values(c.history) as number[]).reduce((a, b) => a + b, 0), 0
-                    ))}
-                  </p>
-                </div>
-              </div>
-            </div>
+          {(() => {
+            const t10Clients = gestaoTop20.clientes.slice(0, 10);
+            
+            // Evolution Chart Data
+            const evolutionDataT10 = [2022, 2023, 2024, 2025, 2026, 2027, 2028].map(year => {
+              let value = 0;
+              if (selectedClientT10 === 'Consolidado T10') {
+                value = t10Clients.reduce((acc: number, c: any) => {
+                  if (year <= 2025) return acc + (c.history[year] || 0);
+                  return acc + (c[`projection${year}`] || 0);
+                }, 0);
+              } else {
+                const c = t10Clients.find((cli: any) => cli.nome === selectedClientT10);
+                if (c) {
+                  if (year <= 2025) value = c.history[year] || 0;
+                  else value = c[`projection${year}`] || 0;
+                }
+              }
+              return { year: String(year), total: value };
+            });
 
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-              {/* The "ASCII" and Chart Area */}
-              <div className="lg:col-span-3 bg-gray-950/50 p-6 rounded-2xl border border-gray-800 relative">
-                <ChartWrapper height={400}>
-                   <ComposedChart 
-                     data={[2022, 2023, 2024, 2025, 2026, 2027, 2028].map(year => ({
-                       year: String(year),
-                       total: gestaoTop20.clientes.slice(0, 10).reduce((acc: number, c: any) => {
-                         if (year <= 2025) return acc + (c.history[year] || 0);
-                         const pKey = `projection${year}`;
-                         return acc + (c[pKey] || 0);
-                       }, 0)
-                     }))}
-                    >
-                     <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
-                     <XAxis dataKey="year" stroke="#444" fontSize={12} tick={{ fill: '#666', fontWeight: 'bold' }} />
-                     <YAxis stroke="#444" fontSize={10} width={80} tickFormatter={v => `R$${(v/1000).toFixed(0)}k`} />
-                     <Tooltip 
-                        contentStyle={{ backgroundColor: '#000', border: '1px solid #333' }}
-                        formatter={(v: number) => formatBRL(v)}
-                     />
-                     <Area type="monotone" dataKey="total" fill="#ef4444" stroke="#ef4444" fillOpacity={0.1} strokeWidth={4} />
-                     <Bar dataKey="total" fill="#ef4444" radius={[4, 4, 0, 0]} opacity={0.3} barSize={40} />
-                     <Line type="monotone" dataKey="total" stroke="#fff" strokeWidth={2} dot={{ r: 6, fill: '#ef4444', stroke: '#fff', strokeWidth: 2 }} />
-                   </ComposedChart>
-                </ChartWrapper>
-                
-                {/* stylized curve ASCII summary indicator */}
-                <div className="absolute top-10 right-10 text-right opacity-30 select-none pointer-events-none font-mono text-[8px] leading-tight">
-                  <pre>
-                    {(() => {
-                      const points = [2022, 2023, 2024, 2025, 2026, 2027, 2028].map(year => 
-                        gestaoTop20.clientes.slice(0, 10).reduce((acc: number, c: any) => {
-                          if (year <= 2025) return acc + (c.history[year] || 0);
-                          return acc + (c[`projection${year}`] || 0);
-                        }, 0)
-                      );
-                      const max = Math.max(...points) || 1;
-                      return points.map(p => {
-                        const level = Math.floor((p / max) * 10);
-                        return '_'.repeat(10-level) + '█' + '_'.repeat(level);
-                      }).join('\n');
-                    })()}
-                  </pre>
-                </div>
-              </div>
+            // YoY comparing Current Year to Previous Year
+            const currentVal = evolutionDataT10.find(y => y.year === selectedYear)?.total || 0;
+            const prevVal = evolutionDataT10.find(y => y.year === String(Number(selectedYear) - 1))?.total || 0;
+            const yoyGrowth = prevVal > 0 ? ((currentVal / prevVal) - 1) * 100 : 0;
+            const isNegative = yoyGrowth < 0;
 
-              {/* Trend Analysis Side Panel */}
-              <div className="bg-gray-900/50 p-6 rounded-2xl border border-gray-800 border-l-4 border-l-red-600">
-                <h3 className="text-white font-black italic text-sm mb-6 uppercase">Mentoria de Crescimento (T10)</h3>
-                <div className="space-y-6">
-                  {(() => {
-                    const topClient = gestaoTop20.clientes[0];
-                    const v2025 = topClient.history[2025] || 0;
-                    const v2026 = topClient.projection2026 || 0;
-                    const growth = v2025 > 0 ? ((v2026/v2025)-1)*100 : 0;
-                    
-                    return (
-                      <div className="space-y-4">
-                        <div className="p-3 bg-red-950/20 border border-red-900/50 rounded-lg">
-                          <p className="text-[10px] text-red-400 font-black uppercase">Foco Principal: {topClient.nome}</p>
-                          <p className="text-xs text-gray-400 mt-2 leading-relaxed">
-                            {growth > 0 
-                              ? `Crescimento projetado de ${growth.toFixed(1)}%. Mantenha a cadência de pedidos via SPIN Selling.` 
-                              : `Atenção: Queda de ${Math.abs(growth).toFixed(1)}% detectada. Risco de ociosidade técnica.`}
-                          </p>
-                        </div>
-                        <div className="p-3 bg-gray-950 border border-gray-800 rounded-lg">
-                          <p className="text-[10px] text-emerald-400 font-black uppercase">Ação Recomendada</p>
-                          <p className="text-xs text-gray-400 mt-2 italic">"Use o histórico da Fertipar para contornar objeções de preço em novos contratos 2026."</p>
+            // Ranking and ABC Analysis for T10
+            const t10Ranking = [...t10Clients].map((c: any) => ({
+                name: c.nome,
+                shortName: c.nome.split(' ').slice(0, 2).join(' '),
+                value: c[`projection${selectedYear}`] || c.history?.[selectedYear] || 0,
+                prevValue: c.history?.[Number(selectedYear)-1] || 0
+            })).sort((a, b) => b.value - a.value);
+
+            const totalT10 = t10Ranking.reduce((acc, c) => acc + c.value, 0);
+            let acum = 0;
+            const curvaABC = t10Ranking.map(c => {
+                acum += c.value;
+                const perc = (acum / totalT10) * 100;
+                let classe = 'C';
+                if (perc <= 70) classe = 'A';
+                else if (perc <= 90) classe = 'B';
+                return { ...c, classe, perc };
+            });
+
+            return (
+              <>
+                <section className="bg-[#0a0c10] p-8 rounded-3xl border border-gray-800 shadow-2xl">
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
+                    <div>
+                      <h2 className="text-white font-black italic text-3xl uppercase tracking-tighter">DASHBOARD EVOLUTIVO T10</h2>
+                      <p className="text-xs text-gray-500 mt-1 uppercase font-bold italic tracking-widest">Inteligência 360° - Análise de Comportamento e Ciclo de Vida</p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <select 
+                        value={selectedClientT10} 
+                        onChange={(e) => setSelectedClientT10(e.target.value)}
+                        className="bg-gray-950 text-white font-bold p-3 rounded-xl border border-gray-700 outline-none focus:ring-1 focus:ring-red-500"
+                      >
+                        <option value="Consolidado T10">Consolidado T10 (Total)</option>
+                        {t10Clients.map((c: any) => (
+                          <option key={c.id} value={c.nome}>{c.nome}</option>
+                        ))}
+                      </select>
+                      
+                      <div className="bg-gray-950 p-3 px-6 rounded-xl border border-gray-800 flex flex-col items-end">
+                        <p className="text-[10px] text-gray-500 font-bold uppercase mb-1">Status {selectedYear}</p>
+                        <div className="flex items-center gap-2">
+                          <span className={`w-3 h-3 rounded-full ${isNegative ? 'bg-red-500 animate-pulse' : 'bg-emerald-500'}`}></span>
+                          <span className={`font-black text-lg ${isNegative ? 'text-red-500' : 'text-emerald-500'}`}>
+                            {isNegative ? 'ALERTA (CHURN)' : 'SAUDÁVEL'}
+                          </span>
                         </div>
                       </div>
-                    );
-                  })()}
-                </div>
-              </div>
-            </div>
-          </section>
+                    </div>
+                  </div>
 
+                  <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                    {/* The "ASCII" and Chart Area */}
+                    <div className="lg:col-span-3 bg-gray-950/50 p-6 rounded-2xl border border-gray-800 relative">
+                      <ChartWrapper height={400}>
+                         <ComposedChart data={evolutionDataT10}>
+                           <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
+                           <XAxis dataKey="year" stroke="#444" fontSize={12} tick={{ fill: '#666', fontWeight: 'bold' }} />
+                           <YAxis stroke="#444" fontSize={10} width={80} tickFormatter={v => `R$${(v/1000).toFixed(0)}k`} />
+                           <Tooltip 
+                              contentStyle={{ backgroundColor: '#000', border: '1px solid #333' }}
+                              formatter={(v: number) => formatBRL(v)}
+                           />
+                           <Area type="monotone" dataKey="total" fill={isNegative ? '#ef4444' : '#10b981'} stroke={isNegative ? '#ef4444' : '#10b981'} fillOpacity={0.1} strokeWidth={4} />
+                           <Bar dataKey="total" fill={isNegative ? '#ef4444' : '#10b981'} radius={[4, 4, 0, 0]} opacity={0.3} barSize={40} />
+                           <Line type="monotone" dataKey="total" stroke="#fff" strokeWidth={2} dot={{ r: 6, fill: isNegative ? '#ef4444' : '#10b981', stroke: '#fff', strokeWidth: 2 }} />
+                         </ComposedChart>
+                      </ChartWrapper>
+                    </div>
 
+                    {/* Trend Analysis Side Panel */}
+                    <div className={`bg-gray-900/50 p-6 rounded-2xl border border-gray-800 border-l-4 ${isNegative ? 'border-l-red-600' : 'border-l-emerald-600'} flex flex-col`}>
+                      <h3 className="text-white font-black italic text-sm mb-6 uppercase">Mentoria de Negociação</h3>
+                      <div className="flex-1 space-y-4">
+                        <div className={`p-4 border rounded-xl ${isNegative ? 'bg-red-950/20 border-red-900/50' : 'bg-emerald-950/20 border-emerald-900/50'}`}>
+                          <p className={`text-[10px] font-black uppercase ${isNegative ? 'text-red-400' : 'text-emerald-400'}`}>Desempenho YoY ({selectedYear})</p>
+                          <p className="text-2xl font-black text-white mt-1">{yoyGrowth > 0 ? '+' : ''}{yoyGrowth.toFixed(1)}%</p>
+                          <p className="text-xs text-gray-400 mt-2">
+                             Anterior: {formatBRL(prevVal)} <br/>
+                             Atual: {formatBRL(currentVal)}
+                          </p>
+                        </div>
+                        
+                        <div className="p-4 bg-gray-950 border border-gray-800 rounded-xl">
+                          <p className={`text-[10px] font-black uppercase ${isNegative ? 'text-amber-400' : 'text-blue-400'}`}>Ação Recomendada (Gatilho)</p>
+                          <p className="text-xs text-gray-400 mt-2 italic leading-relaxed">
+                            {isNegative 
+                              ? `"Alerta de Ociosidade: Acione o Follow-up Técnico urgentemente. Use Spin Selling focando nos custos de inércia e agende reunião."`
+                              : `"Saúde estendida. Momento ideal para Cross-sell e expansão de novos produtos para a planta do cliente."`}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+                
+                {/* Ranking e Curva ABC */}
+                <section className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+                   <div className="bg-[#0a0c10] p-6 rounded-3xl border border-gray-800 shadow-xl">
+                     <h2 className="text-white font-bold italic text-sm uppercase tracking-widest text-emerald-100 mb-6 border-b border-gray-800 pb-2">Ranking Atual: Top 10 Clientes ({selectedYear})</h2>
+                     <ChartWrapper height={350}>
+                        <BarChart data={t10Ranking} layout="vertical" margin={{ left: 80, right: 20 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#222" horizontal={false} />
+                          <XAxis type="number" stroke="#444" fontSize={10} tickFormatter={v => `R$${(v/1000).toFixed(0)}k`} />
+                          <YAxis type="category" dataKey="shortName" stroke="#9ca3af" fontSize={10} interval={0} width={80} />
+                          <Tooltip 
+                            contentStyle={{ backgroundColor: '#000', border: '1px solid #333' }}
+                            formatter={(v: number) => formatBRL(v)}
+                          />
+                          <Bar dataKey="value" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={20} />
+                        </BarChart>
+                     </ChartWrapper>
+                   </div>
+                   
+                   <div className="bg-[#0a0c10] p-6 rounded-3xl border border-gray-800 shadow-xl overflow-hidden flex flex-col">
+                     <h2 className="text-white font-bold italic text-sm uppercase tracking-widest text-amber-100 mb-6 border-b border-gray-800 pb-2">Análise de Segmentação: Curva ABC (T10)</h2>
+                     <div className="flex-1 overflow-x-auto">
+                        <table className="w-full text-left text-sm text-gray-300">
+                           <thead className="bg-gray-950 text-gray-400 text-[10px] uppercase font-bold tracking-wider">
+                              <tr>
+                                 <th className="px-4 py-3">Cliente</th>
+                                 <th className="px-4 py-3 text-right">Faturamento</th>
+                                 <th className="px-4 py-3 text-right">Acumulado</th>
+                                 <th className="px-4 py-3 text-center">Classe</th>
+                              </tr>
+                           </thead>
+                           <tbody className="divide-y divide-gray-800">
+                              {curvaABC.map((c, idx) => (
+                                <tr key={idx} className="hover:bg-gray-800/30">
+                                   <td className="px-4 py-3 font-bold text-xs">{c.name}</td>
+                                   <td className="px-4 py-3 text-right font-mono text-emerald-400 text-xs">{formatBRL(c.value)}</td>
+                                   <td className="px-4 py-3 text-right font-mono text-xs">{c.perc.toFixed(1)}%</td>
+                                   <td className="px-4 py-3 text-center">
+                                      <span className={`px-2 py-1 rounded text-[10px] font-black 
+                                        ${c.classe === 'A' ? 'bg-emerald-950 text-emerald-500 border border-emerald-900' : 
+                                          c.classe === 'B' ? 'bg-amber-950 text-amber-500 border border-amber-900' : 
+                                          'bg-gray-800 text-gray-400 border border-gray-700'}`}
+                                      >
+                                        CLASSE {c.classe}
+                                      </span>
+                                   </td>
+                                </tr>
+                              ))}
+                           </tbody>
+                        </table>
+                     </div>
+                   </div>
+                </section>
+              </>
+            );
+          })()}
         </div>
       )}
 
