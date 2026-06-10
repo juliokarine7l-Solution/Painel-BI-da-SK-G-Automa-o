@@ -14,7 +14,7 @@ export const INDIVIDUAL_METAS: Record<string, Record<string, number>> = {
   syllas: { Jan: 118500, Fev: 138000, Mar: 100000, Abr: 98000, Mai: 94000, Jun: 89000, Jul: 103000, Ago: 116000, Set: 128000, Out: 136000, Nov: 144000, Dez: 125000 },
   v1: { Jan: 24000, Fev: 28000, Mar: 42000, Abr: 43000, Mai: 44000, Jun: 44000, Jul: 42000, Ago: 40000, Set: 39000, Out: 38000, Nov: 37000, Dez: 44000 },
   v2: { Jan: 0, Fev: 20000, Mar: 20000, Abr: 21000, Mai: 21000, Jun: 20000, Jul: 42000, Ago: 40000, Set: 39000, Out: 38000, Nov: 37000, Dez: 41000 },
-  v3: { Jan: 0, Fev: 0, Mar: 0, Abr: 0, Mai: 0, Jun: 0, Jul: 0, Ago: 0, Set: 0, Out: 0, Nov: 0, Dez: 0 },
+  skg: { Jan: 0, Fev: 0, Mar: 0, Abr: 0, Mai: 0, Jun: 0, Jul: 0, Ago: 0, Set: 0, Out: 0, Nov: 0, Dez: 0 },
 };
 
 export const TARGET_GOALS: MonthlyGoal[] = MONTHS.map(m => ({
@@ -22,15 +22,15 @@ export const TARGET_GOALS: MonthlyGoal[] = MONTHS.map(m => ({
   syllas: INDIVIDUAL_METAS.syllas[m],
   v1: INDIVIDUAL_METAS.v1[m],
   v2: INDIVIDUAL_METAS.v2[m],
-  v3: INDIVIDUAL_METAS.v3[m],
-  total: INDIVIDUAL_METAS.syllas[m] + INDIVIDUAL_METAS.v1[m] + INDIVIDUAL_METAS.v2[m] + INDIVIDUAL_METAS.v3[m]
+  skg: INDIVIDUAL_METAS.skg[m],
+  total: INDIVIDUAL_METAS.syllas[m] + INDIVIDUAL_METAS.v1[m] + INDIVIDUAL_METAS.v2[m] + INDIVIDUAL_METAS.skg[m]
 }));
 
 export const SELLERS = [
   { id: 'syllas', label: 'Syllas (Dir.)' },
   { id: 'v1', label: 'Vendedora 01' },
   { id: 'v2', label: 'Vendedora 02' },
-  { id: 'v3', label: 'Vendedora 03' },
+  { id: 'skg', label: 'SK-G' },
 ];
 
 // Base Histórica T20 - Valores consolidados 2021-2025 (Ref: Imagem Image_79a5c4)

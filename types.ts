@@ -4,7 +4,7 @@ export interface MonthlyGoal {
   syllas: number;
   v1: number;
   v2: number;
-  v3: number;
+  skg: number;
   total: number;
   obs?: string;
 }
@@ -13,7 +13,7 @@ export interface SellerActual {
   syllas: number;
   v1: number;
   v2: number;
-  v3: number;
+  skg: number;
   // Permite acesso dinâmico via ID do vendedor (syllas, v1, etc.)
   [key: string]: number;
 }

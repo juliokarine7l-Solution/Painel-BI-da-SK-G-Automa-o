@@ -26,18 +26,18 @@ export const initialMonthlyData = {
 
 export const initialSalespersonData = {
   2026: [
-    { month: 'Jan', Syllas: 47895.31, V1: 9009.22, V2: 0, V3: 18015.06 },
-    { month: 'Fev', Syllas: 91665.50, V1: 18142.95, V2: 0, V3: 19100.55 },
-    { month: 'Mar', Syllas: 37689.04, V1: 8416.21, V2: 0, V3: 20877.11 },
-    { month: 'Abr', Syllas: 75361.67, V1: 41036.70, V2: 0, V3: 27094.53 },
-    { month: 'Mai', Syllas: 66143.86, V1: 13439.88, V2: 0, V3: 15721.95 },
-    { month: 'Jun', Syllas: 0, V1: 0, V2: 0, V3: 0 },
-    { month: 'Jul', Syllas: 0, V1: 0, V2: 0, V3: 0 },
-    { month: 'Ago', Syllas: 0, V1: 0, V2: 0, V3: 0 },
-    { month: 'Set', Syllas: 0, V1: 0, V2: 0, V3: 0 },
-    { month: 'Out', Syllas: 0, V1: 0, V2: 0, V3: 0 },
-    { month: 'Nov', Syllas: 0, V1: 0, V2: 0, V3: 0 },
-    { month: 'Dez', Syllas: 0, V1: 0, V2: 0, V3: 0 },
+    { month: 'Jan', Syllas: 47895.31, V1: 9009.22, V2: 0, SKG: 18015.06 },
+    { month: 'Fev', Syllas: 91665.50, V1: 18142.95, V2: 0, SKG: 19100.55 },
+    { month: 'Mar', Syllas: 37689.04, V1: 8416.21, V2: 0, SKG: 20877.11 },
+    { month: 'Abr', Syllas: 75361.67, V1: 41036.70, V2: 0, SKG: 27094.53 },
+    { month: 'Mai', Syllas: 66143.86, V1: 13439.88, V2: 0, SKG: 15721.95 },
+    { month: 'Jun', Syllas: 0, V1: 0, V2: 0, SKG: 0 },
+    { month: 'Jul', Syllas: 0, V1: 0, V2: 0, SKG: 0 },
+    { month: 'Ago', Syllas: 0, V1: 0, V2: 0, SKG: 0 },
+    { month: 'Set', Syllas: 0, V1: 0, V2: 0, SKG: 0 },
+    { month: 'Out', Syllas: 0, V1: 0, V2: 0, SKG: 0 },
+    { month: 'Nov', Syllas: 0, V1: 0, V2: 0, SKG: 0 },
+    { month: 'Dez', Syllas: 0, V1: 0, V2: 0, SKG: 0 },
   ]
 };
 
@@ -45,7 +45,7 @@ export const initialSalespeopleConfig = [
   { id: 'Syllas', label: 'SYLLAS (DIR.)', meta: 1389500, color: '#10b981' },
   { id: 'V1', label: 'VENDEDORA 01', meta: 465000, color: '#3b82f6' },
   { id: 'V2', label: 'VENDEDORA 02', meta: 339000, color: '#ef4444' },
-  { id: 'V3', label: 'VENDEDORA 03', meta: 0, color: '#f59e0b' }
+  { id: 'SKG', label: 'SK-G', meta: 0, color: '#f59e0b' }
 ];
 
 export const initialCustosEficiencia = [

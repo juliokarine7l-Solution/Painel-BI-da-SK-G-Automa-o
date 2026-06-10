@@ -111,6 +111,35 @@ const App: React.FC = () => {
          }
          return prev;
      });
+     
+     // Migrate V3 to SKG
+     setVendedorData((prev: any[]) => {
+         const needsMigration = prev.some(v => v.V3 !== undefined);
+         if (needsMigration) {
+             return prev.map(v => {
+                 if (v.V3 !== undefined) {
+                     const copy = { ...v, SKG: v.V3 };
+                     delete copy.V3;
+                     return copy;
+                 }
+                 return v;
+             });
+         }
+         return prev;
+     });
+     
+     setVendedoresConfig((prev: any[]) => {
+         const needsMigration = prev.some(v => v.id === 'V3');
+         if (needsMigration) {
+             return prev.map(v => {
+                 if (v.id === 'V3') {
+                     return { ...v, id: 'SKG', label: 'SK-G' };
+                 }
+                 return v;
+             });
+         }
+         return prev;
+     });
   }, []);
 
   useEffect(() => {
