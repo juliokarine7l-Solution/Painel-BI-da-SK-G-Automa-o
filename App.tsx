@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  ComposedChart, Line, AreaChart, Area, PieChart, Pie, Cell 
+  ComposedChart, Line, AreaChart, Area, PieChart, Pie, Cell, Legend
 } from 'recharts';
 import { initialClients, initialMonthlyData, initialSalespersonData, initialCustosEficiencia, initialGestaoTop20, initialQuarterlyHistory, QuarterlyData, initialSalespeopleConfig } from './src/data';
 import { ChartWrapper } from './components/ChartWrapper';
@@ -270,71 +270,73 @@ const App: React.FC = () => {
               </section>
            </section>
 
-           <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+           <section className="grid grid-cols-1 gap-8">
               <section className="bg-gray-900 p-6 rounded-2xl border border-gray-800">
-                <h2 className="text-red-400 font-bold italic mb-6 uppercase tracking-wider flex justify-between items-center">
-                  <span>CAMOZZI VS LOGÍSTICA</span>
-                </h2>
-                <ChartWrapper height={350}>
-                  <ComposedChart data={custos}>
+                <h2 className="text-blue-400 font-bold italic mb-6">MÉTRICA 1: DESEMPENHO DOS VENDEDORES</h2>
+                <ChartWrapper height={400}>
+                  <BarChart data={vendedorData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#333" />
                     <XAxis dataKey="mes" stroke="#aaa" />
-                    <YAxis tickFormatter={v => `R$${v/1000}k`} stroke="#aaa" fontSize={10} />
-                    <Tooltip contentStyle={{backgroundColor: '#000'}} labelStyle={{color: '#fff'}} formatter={(v: number) => formatBRL(v)} />
-                    <Bar dataKey="materiaPrima" fill="#3b82f6" name="Matéria-Prima (Camozzi)" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey={(d: any) => d.zmExpress + d.tercExpress + d.correios} fill="#ef4444" name="Logística Total" radius={[4, 4, 0, 0]} />
-                  </ComposedChart>
+                    <YAxis tickFormatter={v => formatBRL(v).split(',')[0]} stroke="#aaa" fontSize={10} width={80} />
+                    <Tooltip contentStyle={{backgroundColor: '#000', border: '1px solid #333'}} labelStyle={{color: '#fff'}} formatter={(v: number) => formatBRL(v)} />
+                    <Legend wrapperStyle={{ paddingTop: '20px' }} />
+                    {vendedoresConfig.map((v: any, idx: number) => (
+                      <Bar key={v.id} dataKey={v.id} name={v.label} fill={v.color || ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'][idx % 4]} radius={[4, 4, 0, 0]} />
+                    ))}
+                  </BarChart>
                 </ChartWrapper>
               </section>
 
-             <div className="bg-gray-900 p-6 rounded-2xl border border-gray-800">
-                <h2 className="text-red-500 font-bold italic mb-6 uppercase tracking-wider flex justify-between items-center text-sm">
-                  <span>PESO LOGÍSTICO (% FATURAMENTO)</span>
-                  <span className="text-[10px] text-gray-500 font-mono font-normal">Eficiência em Tempo Real</span>
-                </h2>
-                <ChartWrapper height={320}>
-                  <ComposedChart data={custos.map((c: any, idx: number) => ({ 
-                    mes: c.mes, 
-                    perc: (c.faturamento > 0) ? (((c.zmExpress + c.tercExpress + c.correios) / c.faturamento) * 100) : 0 
-                  }))}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
-                    <XAxis dataKey="mes" stroke="#666" fontSize={10} />
-                    <YAxis stroke="#666" fontSize={10} domain={[0, 'auto']} tickFormatter={v => `${v.toFixed(1)}%`} />
-                    <Tooltip formatter={(v: number) => `${v.toFixed(2)}%`} contentStyle={{ backgroundColor: '#000', border: '1px solid #333', fontSize: '10px' }} />
-                    <Bar dataKey="perc" fill="#ef4444" name="Peso Logístico" radius={[2, 2, 0, 0]} />
-                    <Line type="monotone" dataKey="perc" stroke="#fff" strokeWidth={1} dot={{ r: 2 }} />
-                  </ComposedChart>
-                </ChartWrapper>
-                <div className="mt-4 flex flex-col gap-2">
-                   <div className="flex justify-between items-center">
-                     <span className="text-[9px] text-gray-500 font-bold">ALVO DE EFICIÊNCIA</span>
-                     <span className="text-[9px] text-emerald-500 font-black tracking-widest">&lt; 5.0%</span>
-                   </div>
-                   <div className="h-1 w-full bg-gray-800 rounded-full overflow-hidden">
-                      <div className="h-full bg-emerald-500" style={{ width: '50%' }}></div>
-                   </div>
+              <section className="bg-gray-900 p-6 rounded-2xl border border-gray-800">
+                <h2 className="text-pink-400 font-bold italic mb-6">MÉTRICA 2: DESEMPENHO MENSAL MATÉRIA-PRIMA CAMOZZI</h2>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm text-gray-400">
+                    <thead className="bg-[#1f2937] text-gray-400 text-xs uppercase font-bold">
+                       <tr>
+                          <th className="px-4 py-3">MÊS</th>
+                          <th className="px-4 py-3">VALOR CONSUMIDO (R$)</th>
+                          <th className="px-4 py-3">META (R$)</th>
+                          <th className="px-4 py-3">% DA META</th>
+                          <th className="px-4 py-3 w-1/3">MINI GRÁFICO</th>
+                       </tr>
+                    </thead>
+                    <tbody>
+                       {custos.map((row: any, i: number) => {
+                          const meta = row.metaCamozzi || 0;
+                          const consumido = row.materiaPrima || 0;
+                          let perc = 0;
+                          if (meta > 0) {
+                              perc = (consumido / meta) * 100;
+                          } else if (consumido > 0) {
+                              perc = 100;
+                          }
+                          
+                          let progressColor = "bg-emerald-500";
+                          if (perc > 120) progressColor = "bg-red-500";
+                          else if (perc > 100) progressColor = "bg-amber-500";
+                          
+                          return (
+                             <tr key={i} className="border-b border-gray-800 hover:bg-gray-800/50">
+                                <td className="px-4 py-3 font-medium text-white">{row.mes}</td>
+                                <td className="px-4 py-3 text-white">{formatBRL(consumido)}</td>
+                                <td className="px-4 py-3">{formatBRL(meta)}</td>
+                                <td className="px-4 py-3 font-black text-white">{perc.toFixed(2)}%</td>
+                                <td className="px-4 py-3 font-mono text-xs flex items-center gap-2">
+                                   <div className="flex-1 h-3 bg-gray-800 rounded-full overflow-hidden relative">
+                                      <div className={`h-full ${progressColor} transition-all duration-500`} style={{ width: `${Math.min(perc, 100)}%` }}></div>
+                                      {perc > 100 && (
+                                          <div className="absolute top-0 bottom-0 right-0 left-0 bg-red-500 opacity-30" style={{ width: `${Math.min(perc - 100, 100)}%`, left: '100%' }}></div>
+                                      )}
+                                   </div>
+                                   <span className="min-w-[40px] text-right">{perc.toFixed(0)}%</span>
+                                </td>
+                             </tr>
+                          );
+                       })}
+                    </tbody>
+                  </table>
                 </div>
-             </div>
-           </section>
-
-           <section className="grid grid-cols-1 gap-8">
-             <div className="bg-gray-900 p-6 rounded-2xl border border-gray-800">
-                <h2 className="text-amber-400 font-bold italic mb-6 uppercase tracking-wider flex justify-between items-center text-sm">
-                  <span>COMPOSIÇÃO E TRENDS DE CUSTOS LOGÍSTICOS</span>
-                  <span className="text-[10px] text-gray-500 font-mono font-normal">Análise p/ Modal de Entrega</span>
-                </h2>
-                <ChartWrapper height={350}>
-                  <AreaChart data={custos}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
-                    <XAxis dataKey="mes" stroke="#666" fontSize={12} />
-                    <YAxis stroke="#666" fontSize={10} width={60} tickFormatter={v => formatBRL(v).split(',')[0]} />
-                    <Tooltip formatter={(v: number) => formatBRL(v)} contentStyle={{ backgroundColor: '#000', border: '1px solid #333' }} />
-                    <Area type="monotone" dataKey="zmExpress" stackId="1" stroke="#f59e0b" fill="#f59e0b" name="ZM Express" fillOpacity={0.6} />
-                    <Area type="monotone" dataKey="tercExpress" stackId="1" stroke="#ef4444" fill="#ef4444" name="Terc. Express" fillOpacity={0.6} />
-                    <Area type="monotone" dataKey="correios" stackId="1" stroke="#3b82f6" fill="#3b82f6" name="Correios" fillOpacity={0.6} />
-                  </AreaChart>
-                </ChartWrapper>
-             </div>
+              </section>
            </section>
 
 
