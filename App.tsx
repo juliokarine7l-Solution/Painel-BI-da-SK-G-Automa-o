@@ -311,9 +311,9 @@ const App: React.FC = () => {
                               perc = 100;
                           }
                           
-                          let progressColor = "bg-emerald-500";
-                          if (perc > 120) progressColor = "bg-red-500";
-                          else if (perc > 100) progressColor = "bg-amber-500";
+                          let progressColor = "bg-red-500";
+                          if (perc >= 100) progressColor = "bg-emerald-500";
+                          else if (perc >= 50) progressColor = "bg-amber-500";
                           
                           return (
                              <tr key={i} className="border-b border-gray-800 hover:bg-gray-800/50">
@@ -325,7 +325,7 @@ const App: React.FC = () => {
                                    <div className="flex-1 h-3 bg-gray-800 rounded-full overflow-hidden relative">
                                       <div className={`h-full ${progressColor} transition-all duration-500`} style={{ width: `${Math.min(perc, 100)}%` }}></div>
                                       {perc > 100 && (
-                                          <div className="absolute top-0 bottom-0 right-0 left-0 bg-red-500 opacity-30" style={{ width: `${Math.min(perc - 100, 100)}%`, left: '100%' }}></div>
+                                          <div className="absolute top-0 bottom-0 right-0 left-0 bg-emerald-500 opacity-50" style={{ width: `${Math.min(perc - 100, 100)}%`, left: '100%' }}></div>
                                       )}
                                    </div>
                                    <span className="min-w-[40px] text-right">{perc.toFixed(0)}%</span>
