@@ -8,6 +8,7 @@ import { initialClients, initialMonthlyData, initialSalespersonData, initialCust
 import { ChartWrapper } from './components/ChartWrapper';
 import { DatabaseManager } from './src/components/DatabaseManager';
 import { GaugeChart } from './src/components/GaugeChart';
+import { YoYComparison } from './src/components/YoYComparison';
 
 const formatBRL = (value: number): string => 
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 }).format(value || 0);
@@ -231,7 +232,7 @@ const App: React.FC = () => {
           <h1 className="text-xl font-black italic">SK-G INDUSTRIAL INTELLIGENCE</h1>
         </div>
         <div className="flex gap-2 items-center">
-          {['FATURAMENTO E CUSTOS', 'VENDEDORES', 'DASHBOARD T10', 'GESTÃO TOP 20', 'ANÁLISE TRIMESTRAL', 'BANCO DE DADOS (PLANILHAS)'].map(tab => (
+          {['FATURAMENTO E CUSTOS', 'VENDEDORES', 'DASHBOARD T10', 'GESTÃO TOP 20', 'ANÁLISE TRIMESTRAL', 'ANÁLISE YOY', 'BANCO DE DADOS (PLANILHAS)'].map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)} className={`px-4 py-2 text-xs font-bold rounded ${activeTab === tab ? 'bg-white text-red-700' : 'bg-red-900/50 text-white hover:bg-red-900'}`}>{tab}</button>
           ))}
           {(() => {
@@ -1026,6 +1027,12 @@ const App: React.FC = () => {
         </div>
       )}
       
+      {activeTab === 'ANÁLISE YOY' && (
+        <div className="space-y-8 animate-in slide-in-from-right duration-500">
+           <YoYComparison metas={metas} />
+        </div>
+      )}
+
       {activeTab === 'BANCO DE DADOS (PLANILHAS)' && (
          <DatabaseManager 
             vendedoresConfig={vendedoresConfig} setVendedoresConfig={setVendedoresConfig}
