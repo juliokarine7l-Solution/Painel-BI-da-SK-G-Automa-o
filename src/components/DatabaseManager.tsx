@@ -79,7 +79,7 @@ export const DatabaseManager = ({
                     <tbody>
                        {custos.map((row: any, i: number) => {
                           const meta = row.metaCamozzi || 0;
-                          const realizado = row.materiaPrima || 0;
+                          const realizado = row.Camozzi || 0;
                           let atingimento = "0.00%";
                           let atingimentoClass = "text-amber-500";
                           if (meta > 0) {

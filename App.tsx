@@ -103,11 +103,28 @@ const App: React.FC = () => {
      });
      
      setCustos((prev: any[]) => {
-         if (prev && prev.length > 0 && ('eficiencia' in prev[0] || !('metaCamozzi' in prev[0]))) {
+         if (!prev || prev.length === 0) return initialCustosEficiencia;
+         const needsMigration = prev.some(c => ('materiaPrima' in c) || !('Camozzi' in c) || !('Outros Fornecedores' in c) || ('eficiencia' in c || !('metaCamozzi' in c)));
+         if (needsMigration) {
              return initialCustosEficiencia.map((initItem, idx) => {
                  const prevItem = prev[idx] || {};
-                 // Keep the newly requested materia prima inputs from initialCustosEficiencia but users could have edited the other fields
-                 return { ...initItem, faturamento: prevItem.faturamento || initItem.faturamento, zmExpress: prevItem.zmExpress || 0, tercExpress: prevItem.tercExpress || 0, correios: prevItem.correios || 0 };
+                 const copy = { ...initItem };
+                 if ('faturamento' in prevItem) copy.faturamento = prevItem.faturamento;
+                 if ('zmExpress' in prevItem) copy.zmExpress = prevItem.zmExpress;
+                 if ('tercExpress' in prevItem) copy.tercExpress = prevItem.tercExpress;
+                 if ('correios' in prevItem) copy.correios = prevItem.correios;
+                 
+                 if ('materiaPrima' in prevItem) {
+                     copy.Camozzi = prevItem.materiaPrima;
+                 } else if ('Camozzi' in prevItem) {
+                     copy.Camozzi = prevItem.Camozzi;
+                 }
+                 
+                 if ('Outros Fornecedores' in prevItem) {
+                     copy['Outros Fornecedores'] = prevItem['Outros Fornecedores'];
+                 }
+                 
+                 return copy;
              });
          }
          return prev;
@@ -165,7 +182,8 @@ const App: React.FC = () => {
   // Migration: Reset local data if stale or incorrect
 
   const metaAnualCamozzi = useMemo(() => custos.reduce((acc: any, m: any) => acc + m.metaCamozzi, 0), [custos]);
-  const custoTotalCamozzi = useMemo(() => custos.reduce((acc: any, m: any) => acc + m.materiaPrima, 0), [custos]);
+  const custoTotalCamozzi = useMemo(() => custos.reduce((acc: any, m: any) => acc + (m.Camozzi || 0), 0), [custos]);
+  const custoTotalOutrosFornecedores = useMemo(() => custos.reduce((acc: any, m: any) => acc + (m['Outros Fornecedores'] || 0), 0), [custos]);
   const custoTotalOutros = useMemo(() => custos.reduce((acc: any, m: any) => acc + (m.zmExpress + m.tercExpress + m.correios), 0), [custos]);
   const percCamozziGlobal = metaAnualCamozzi > 0 ? (custoTotalCamozzi / metaAnualCamozzi) * 100 : 0;
   
@@ -263,11 +281,11 @@ const App: React.FC = () => {
               </div>
               <div className="bg-gray-900 p-6 rounded-2xl border border-gray-800 shadow-xl">
                 <p className="text-[10px] text-gray-400 uppercase font-bold">Custo Total Geral</p>
-                <p className="text-xl font-black mt-2 text-amber-500">{formatBRL(custos.reduce((a,c) => a + c.materiaPrima + c.zmExpress + c.tercExpress + c.correios, 0))}</p>
+                <p className="text-xl font-black mt-2 text-amber-500">{formatBRL(custos.reduce((a,c) => a + (c.Camozzi || 0) + (c['Outros Fornecedores'] || 0) + c.zmExpress + c.tercExpress + c.correios, 0))}</p>
               </div>
               <div className="bg-gray-900 p-6 rounded-2xl border border-gray-800 shadow-xl">
-                <p className="text-[10px] text-gray-400 uppercase font-bold">Custo Camozzi</p>
-                <p className="text-xl font-black mt-2 text-red-500">{formatBRL(custoTotalCamozzi)}</p>
+                <p className="text-[10px] text-gray-400 uppercase font-bold">Custo Matéria-Prima Real</p>
+                <p className="text-xl font-black mt-2 text-red-500">{formatBRL(custoTotalCamozzi + custoTotalOutrosFornecedores)}</p>
               </div>
               <div className="bg-gray-900 p-6 rounded-2xl border border-gray-800 shadow-xl">
                 <p className="text-[10px] text-gray-400 uppercase font-bold">Custos Logísticos</p>
@@ -333,7 +351,7 @@ const App: React.FC = () => {
                     <tbody>
                        {custos.map((row: any, i: number) => {
                           const meta = row.metaCamozzi || 0;
-                          const consumido = row.materiaPrima || 0;
+                          const consumido = row.Camozzi || 0;
                           let perc = 0;
                           if (meta > 0) {
                               perc = (consumido / meta) * 100;
