@@ -67,6 +67,41 @@ export const metaMensal = [
   { month: 'Dez', meta: 172583.34, r2026: 0, r2027: 0, r2028: 0 },
 ];
 
+const CustomRentabilidadeTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    const isProfitable = data.lucro >= 0;
+    return (
+      <div className="bg-gray-950 border border-gray-800 p-4 rounded-xl shadow-2xl space-y-2 text-white">
+        <p className="text-gray-300 font-black text-sm uppercase tracking-wider">{data.mes}</p>
+        <div className="space-y-1">
+          <div className="flex justify-between gap-8 text-xs font-bold text-gray-400">
+            <span>Faturamento:</span>
+            <span className="text-emerald-400">{formatBRL(data.faturamento)}</span>
+          </div>
+          <div className="flex justify-between gap-8 text-xs font-bold text-gray-400">
+            <span>Custo Geral:</span>
+            <span className="text-rose-400">{formatBRL(data.custoGeral)}</span>
+          </div>
+          <div className="border-t border-gray-800 my-1 pt-1 flex justify-between gap-8 text-xs font-black text-gray-300">
+            <span>Resultado:</span>
+            <span className={isProfitable ? 'text-emerald-400' : 'text-rose-400'}>
+              {formatBRL(data.lucro)}
+            </span>
+          </div>
+          <div className="flex justify-between gap-8 text-[10px] font-black uppercase tracking-wider text-gray-500">
+            <span>Margem:</span>
+            <span className={isProfitable ? 'text-emerald-500' : 'text-rose-500'}>
+              {data.margem.toFixed(1)}%
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
+
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('FATURAMENTO E CUSTOS');
   const [metas, setMetas] = useState(() => JSON.parse(localStorage.getItem('skg-metas') || JSON.stringify(metaMensal)));
@@ -91,6 +126,7 @@ const App: React.FC = () => {
   const [selectedYear, setSelectedYear] = useState('2026');
   const [selectedClientT10, setSelectedClientT10] = useState('Consolidado T10');
   const [selectedQuarterAnalysis, setSelectedQuarterAnalysis] = useState('1º');
+  const [rentabilidadeChartType, setRentabilidadeChartType] = useState('composed');
 
   // Migrate to exact 2026 meta goal and custos structure
   useEffect(() => {
@@ -186,6 +222,59 @@ const App: React.FC = () => {
   const custoTotalOutrosFornecedores = useMemo(() => custos.reduce((acc: any, m: any) => acc + (m['Outros Fornecedores'] || 0), 0), [custos]);
   const custoTotalOutros = useMemo(() => custos.reduce((acc: any, m: any) => acc + (m.zmExpress + m.tercExpress + m.correios), 0), [custos]);
   const percCamozziGlobal = metaAnualCamozzi > 0 ? (custoTotalCamozzi / metaAnualCamozzi) * 100 : 0;
+  
+  const faturamentoVsCustoData = useMemo(() => {
+    return metas.map((item: any, idx: number) => {
+      const monthName = item.month || item.mes;
+      const faturamento = item[`r${selectedYear}`] !== undefined ? item[`r${selectedYear}`] : (item.r2026 || 0);
+      const c = custos[idx] || {};
+      const custoGeral = (c.Camozzi || 0) + (c['Outros Fornecedores'] || 0) + (c.zmExpress || 0) + (c.tercExpress || 0) + (c.correios || 0);
+      const lucro = faturamento - custoGeral;
+      const margem = faturamento > 0 ? (lucro / faturamento) * 100 : 0;
+      return {
+        mes: monthName,
+        faturamento,
+        custoGeral,
+        lucro,
+        margem: parseFloat(margem.toFixed(1))
+      };
+    });
+  }, [metas, custos, selectedYear]);
+
+  const { avgMargin, totalLucro, bestMonth, highestCostMonth } = useMemo(() => {
+    let sumMargin = 0;
+    let sumFaturamento = 0;
+    let sumCustoGeral = 0;
+    let best = { mes: '-', margem: -999 };
+    let highestCost = { mes: '-', custoGeral: 0 };
+    let validMonthsCount = 0;
+
+    faturamentoVsCustoData.forEach(d => {
+      if (d.faturamento > 0 || d.custoGeral > 0) {
+        sumMargin += d.margem;
+        sumFaturamento += d.faturamento;
+        sumCustoGeral += d.custoGeral;
+        validMonthsCount++;
+        
+        if (d.faturamento > 0 && d.margem > best.margem) {
+          best = { mes: d.mes, margem: d.margem };
+        }
+        if (d.custoGeral > highestCost.custoGeral) {
+          highestCost = { mes: d.mes, custoGeral: d.custoGeral };
+        }
+      }
+    });
+
+    const avgMarginVal = validMonthsCount > 0 ? (sumMargin / validMonthsCount) : 0;
+    const totalLucroVal = sumFaturamento - sumCustoGeral;
+
+    return {
+      avgMargin: avgMarginVal,
+      totalLucro: totalLucroVal,
+      bestMonth: best.mes !== '-' ? best : { mes: 'Sem dados', margem: 0 },
+      highestCostMonth: highestCost.mes !== '-' ? highestCost : { mes: 'Sem dados', custoGeral: 0 }
+    };
+  }, [faturamentoVsCustoData]);
   
   const quarterlySummaries = useMemo(() => {
     const byYear: Record<string, number> = {};
@@ -319,6 +408,129 @@ const App: React.FC = () => {
            </section>
 
            <section className="grid grid-cols-1 gap-8">
+              <section className="bg-gray-900 p-6 rounded-2xl border border-gray-800">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 border-b border-gray-800 pb-4">
+                  <div>
+                    <h2 className="text-amber-500 font-black italic uppercase tracking-tighter text-xl">
+                      ANÁLISE DE RENTABILIDADE: FATURAMENTO VS CUSTO GERAL ({selectedYear})
+                    </h2>
+                    <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mt-1">Comparativo Mensal de Receitas, Custos Totais e Margem de Contribuição</p>
+                  </div>
+                  <div className="flex gap-1.5 bg-gray-950 p-1.5 rounded-xl border border-gray-800">
+                    <button 
+                      onClick={() => setRentabilidadeChartType('composed')} 
+                      className={`px-3 py-1 text-[10px] font-black uppercase rounded-lg transition-all ${rentabilidadeChartType === 'composed' ? 'bg-amber-600 text-white' : 'text-gray-500 hover:text-gray-300'}`}
+                    >
+                      Misto
+                    </button>
+                    <button 
+                      onClick={() => setRentabilidadeChartType('bar')} 
+                      className={`px-3 py-1 text-[10px] font-black uppercase rounded-lg transition-all ${rentabilidadeChartType === 'bar' ? 'bg-amber-600 text-white' : 'text-gray-500 hover:text-gray-300'}`}
+                    >
+                      Barras
+                    </button>
+                    <button 
+                      onClick={() => setRentabilidadeChartType('area')} 
+                      className={`px-3 py-1 text-[10px] font-black uppercase rounded-lg transition-all ${rentabilidadeChartType === 'area' ? 'bg-amber-600 text-white' : 'text-gray-500 hover:text-gray-300'}`}
+                    >
+                      Áreas
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                  {/* Chart Column */}
+                  <div className="lg:col-span-3">
+                    <ChartWrapper height={380}>
+                      {rentabilidadeChartType === 'composed' && (
+                        <ComposedChart data={faturamentoVsCustoData}>
+                          <defs>
+                            <linearGradient id="colorFaturamento" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
+                              <stop offset="95%" stopColor="#10b981" stopOpacity={0.1}/>
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid stroke="#1f2937" strokeDasharray="3 3" vertical={false} />
+                          <XAxis dataKey="mes" stroke="#9ca3af" fontSize={11} tickLine={false} />
+                          <YAxis tickFormatter={v => `R$ ${(v / 1000).toFixed(0)}k`} stroke="#9ca3af" fontSize={11} width={80} tickLine={false} />
+                          <Tooltip content={<CustomRentabilidadeTooltip />} />
+                          <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '11px', fontWeight: 'bold' }} />
+                          <Bar dataKey="faturamento" fill="url(#colorFaturamento)" stroke="#10b981" strokeWidth={1} name="Faturamento Real" radius={[4, 4, 0, 0]} />
+                          <Line dataKey="custoGeral" stroke="#ef4444" strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: '#111827' }} activeDot={{ r: 6 }} name="Custo Geral" />
+                        </ComposedChart>
+                      )}
+                      {rentabilidadeChartType === 'bar' && (
+                        <BarChart data={faturamentoVsCustoData}>
+                          <CartesianGrid stroke="#1f2937" strokeDasharray="3 3" vertical={false} />
+                          <XAxis dataKey="mes" stroke="#9ca3af" fontSize={11} tickLine={false} />
+                          <YAxis tickFormatter={v => `R$ ${(v / 1000).toFixed(0)}k`} stroke="#9ca3af" fontSize={11} width={80} tickLine={false} />
+                          <Tooltip content={<CustomRentabilidadeTooltip />} />
+                          <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '11px', fontWeight: 'bold' }} />
+                          <Bar dataKey="faturamento" fill="#10b981" name="Faturamento Real" radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="custoGeral" fill="#ef4444" name="Custo Geral" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      )}
+                      {rentabilidadeChartType === 'area' && (
+                        <AreaChart data={faturamentoVsCustoData}>
+                          <defs>
+                            <linearGradient id="colorFaturamentoArea" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#10b981" stopOpacity={0.4}/>
+                              <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                            </linearGradient>
+                            <linearGradient id="colorCustoArea" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#ef4444" stopOpacity={0.4}/>
+                              <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid stroke="#1f2937" strokeDasharray="3 3" vertical={false} />
+                          <XAxis dataKey="mes" stroke="#9ca3af" fontSize={11} tickLine={false} />
+                          <YAxis tickFormatter={v => `R$ ${(v / 1000).toFixed(0)}k`} stroke="#9ca3af" fontSize={11} width={80} tickLine={false} />
+                          <Tooltip content={<CustomRentabilidadeTooltip />} />
+                          <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '11px', fontWeight: 'bold' }} />
+                          <Area type="monotone" dataKey="faturamento" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorFaturamentoArea)" name="Faturamento Real" />
+                          <Area type="monotone" dataKey="custoGeral" stroke="#ef4444" strokeWidth={2} fillOpacity={1} fill="url(#colorCustoArea)" name="Custo Geral" />
+                        </AreaChart>
+                      )}
+                    </ChartWrapper>
+                  </div>
+
+                  {/* Stats Column */}
+                  <div className="flex flex-col justify-between space-y-3">
+                    <div className="bg-gray-950 p-4 rounded-2xl border border-gray-800 shadow-lg flex-1 flex flex-col justify-center">
+                      <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-1">Média de Margem</p>
+                      <p className={`text-2xl font-black ${avgMargin >= 30 ? 'text-emerald-400' : avgMargin >= 15 ? 'text-amber-400' : 'text-rose-500'}`}>
+                        {avgMargin.toFixed(1)}%
+                      </p>
+                      <p className="text-[8px] text-gray-600 mt-1 uppercase font-bold italic">Rentabilidade Média Geral</p>
+                    </div>
+
+                    <div className="bg-gray-950 p-4 rounded-2xl border border-gray-800 shadow-lg flex-1 flex flex-col justify-center">
+                      <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-1">Resultado Líquido</p>
+                      <p className={`text-2xl font-black ${totalLucro >= 0 ? 'text-emerald-400' : 'text-rose-500'}`}>
+                        {formatBRL(totalLucro)}
+                      </p>
+                      <p className="text-[8px] text-gray-600 mt-1 uppercase font-bold italic">Acumulado Receitas vs Despesas</p>
+                    </div>
+
+                    <div className="bg-gray-950 p-4 rounded-2xl border border-gray-800 shadow-lg flex-1 flex flex-col justify-center">
+                      <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-1">Melhor Margem</p>
+                      <p className="text-xl font-black text-blue-400">
+                        {bestMonth.mes} ({bestMonth.margem.toFixed(1)}%)
+                      </p>
+                      <p className="text-[8px] text-gray-600 mt-1 uppercase font-bold italic">Mês Mais Eficiente</p>
+                    </div>
+
+                    <div className="bg-gray-950 p-4 rounded-2xl border border-gray-800 shadow-lg flex-1 flex flex-col justify-center">
+                      <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-1">Maior Custo Geral</p>
+                      <p className="text-xl font-black text-rose-500">
+                        {highestCostMonth.mes} ({formatBRL(highestCostMonth.custoGeral).split(',')[0]})
+                      </p>
+                      <p className="text-[8px] text-gray-600 mt-1 uppercase font-bold italic">Pico de Despesas do Ano</p>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
               <section className="bg-gray-900 p-6 rounded-2xl border border-gray-800">
                 <h2 className="text-blue-400 font-bold italic mb-6">MÉTRICA 1: DESEMPENHO DOS VENDEDORES</h2>
                 <ChartWrapper height={400}>
