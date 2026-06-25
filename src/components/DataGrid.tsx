@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-export const DataGrid = ({ data, setData, title }: { data: any[], setData: (data: any[]) => void, title: string }) => {
+export const DataGrid = ({ data, setData, title, onSave }: { data: any[], setData: (data: any[]) => void, title: string, onSave?: () => void }) => {
   const [newColumnName, setNewColumnName] = useState('');
 
   if (!data || data.length === 0) return <div>Sem dados</div>;
@@ -116,10 +116,19 @@ export const DataGrid = ({ data, setData, title }: { data: any[], setData: (data
           </tbody>
         </table>
       </div>
-      <div className="mt-4">
-        <button onClick={handleAddRow} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded text-xs font-bold">
+      <div className="mt-4 flex flex-wrap gap-2 items-center">
+        <button onClick={handleAddRow} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded text-xs font-bold transition-all active:scale-95 shadow">
           + Adicionar Linha
         </button>
+        {onSave && (
+          <button 
+            onClick={onSave} 
+            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-all active:scale-95 shadow shadow-green-900/50"
+            title="Salvar todas as planilhas no cache"
+          >
+            💾 Salvar Lançamentos
+          </button>
+        )}
       </div>
     </div>
   );

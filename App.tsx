@@ -1271,6 +1271,7 @@ const App: React.FC = () => {
             custos={custos} setCustos={setCustos}
             quarterlyHistory={quarterlyHistory} setQuarterlyHistory={setQuarterlyHistory}
             gestaoTop20={gestaoTop20} setGestaoTop20={setGestaoTop20}
+            handleSave={handleSave}
          />
       )}
 

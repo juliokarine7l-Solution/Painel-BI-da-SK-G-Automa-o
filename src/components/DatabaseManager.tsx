@@ -7,7 +7,8 @@ export const DatabaseManager = ({
     vendedorData, setVendedorData,
     custos, setCustos,
     quarterlyHistory, setQuarterlyHistory,
-    gestaoTop20, setGestaoTop20
+    gestaoTop20, setGestaoTop20,
+    handleSave
 }: any) => {
 
     const flattenedTop20 = gestaoTop20.clientes.map((c: any) => ({
@@ -50,19 +51,19 @@ export const DatabaseManager = ({
     };
 
     return (
-        <div className="space-y-8 animate-fade-in">
+        <div className="space-y-8 animate-fade-in pb-16">
             <h2 className="text-2xl font-black italic border-b border-gray-800 pb-2 flex items-center gap-2">
                 🗄️ GERENCIADOR DE BANCO DE DADOS (PLANILHAS NATIVAS)
             </h2>
             <p className="text-gray-400 text-sm">
                 Edite os dados nativamente no formato de planilha abaixo. Todas as alterações serão refletidas em tempo real nos painéis.
-                Não se esqueça de clicar em "Salvar Lançamentos" no menu superior para perpetuar no cache.
+                Você pode clicar no botão <span className="text-green-400 font-bold">"💾 Salvar Lançamentos"</span> ao final de cada planilha ou no topo para salvar os dados no cache.
             </p>
 
-            <DataGrid title="Planilha: Configuração de Vendedores (Campos ID, Label, Meta, Color)" data={vendedoresConfig} setData={setVendedoresConfig} />
-            <DataGrid title="Planilha: Metas Mensais" data={metas} setData={setMetas} />
-            <DataGrid title="Planilha: Lançamentos de Vendedores" data={vendedorData} setData={setVendedorData} />
-            <DataGrid title="Planilha: Custos e Logística" data={custos} setData={setCustos} />
+            <DataGrid title="Planilha: Configuração de Vendedores (Campos ID, Label, Meta, Color)" data={vendedoresConfig} setData={setVendedoresConfig} onSave={handleSave} />
+            <DataGrid title="Planilha: Metas Mensais" data={metas} setData={setMetas} onSave={handleSave} />
+            <DataGrid title="Planilha: Lançamentos de Vendedores" data={vendedorData} setData={setVendedorData} onSave={handleSave} />
+            <DataGrid title="Planilha: Custos e Logística" data={custos} setData={setCustos} onSave={handleSave} />
             
             <div className="bg-gray-900 border border-gray-800 rounded-xl mt-4 overflow-hidden shadow-xl">
                <h3 className="text-white font-bold p-4 text-base italic border-b border-gray-800">Desempenho Mensal (Matéria-Prima Camozzi)</h3>
@@ -105,8 +106,8 @@ export const DatabaseManager = ({
                  </table>
                </div>
             </div>
-            <DataGrid title="Planilha: Histórico Trimestral" data={quarterlyHistory} setData={setQuarterlyHistory} />
-            <DataGrid title="Planilha: Gestão Top 20" data={flattenedTop20} setData={setFlattenedTop20} />
+            <DataGrid title="Planilha: Histórico Trimestral" data={quarterlyHistory} setData={setQuarterlyHistory} onSave={handleSave} />
+            <DataGrid title="Planilha: Gestão Top 20" data={flattenedTop20} setData={setFlattenedTop20} onSave={handleSave} />
 
         </div>
     );
