@@ -11,14 +11,15 @@ export const YoYComparison = ({ metas }: { metas: any[] }) => {
   const [selectedYears, setSelectedYears] = useState(['2024', '2025', '2026']);
   const [chartType, setChartType] = useState('line');
 
-  // Hardcoded 2024 data based on prompt
   const data2024 = [
-    79972.17, 144928.24, 199457.25, 141213.46, 165108.55, 177301.12,
-    109459.93, 155366.78, 83484.13, 116519.48, 102426.40, 85824.65
+    91842.29, 408085.74, 96799.90, 199457.25, 255476.61, 164346.05,
+    167387.51, 109446.09, 139411.98, 91550.09, 93731.72, 102426.40
   ];
 
-  // Mock 2025 data (around 15% higher)
-  const data2025 = data2024.map(v => v * 1.15);
+  const data2025 = [
+    79972.17, 88694.93, 144928.24, 222667.52, 141213.46, 173648.50,
+    177651.08, 183573.64, 155366.78, 142715.48, 116519.48, 85824.65
+  ];
 
   const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
@@ -204,6 +205,34 @@ export const YoYComparison = ({ metas }: { metas: any[] }) => {
                    </tr>
                  );
                })}
+               <tr className="bg-gray-900 border-t-2 border-gray-700 font-bold">
+                 <td className="px-4 py-3 text-xs uppercase tracking-wider text-amber-500">TOTAL</td>
+                 {selectedYears.map(year => {
+                   const total = chartData.reduce((acc, row) => acc + (row[year] || 0), 0);
+                   return (
+                     <td key={year} className="px-4 py-3 text-right font-mono text-xs text-white">
+                       {total > 0 ? formatBRL(total) : '-'}
+                     </td>
+                   );
+                 })}
+                 {selectedYears.includes('2025') && selectedYears.includes('2026') && (() => {
+                   const total2025 = chartData.reduce((acc, row) => acc + (row['2025'] || 0), 0);
+                   const total2026 = chartData.reduce((acc, row) => acc + (row['2026'] || 0), 0);
+                   let yoyTotal = null;
+                   if (total2025 > 0 && total2026 > 0) {
+                     yoyTotal = ((total2026 - total2025) / total2025) * 100;
+                   }
+                   return (
+                     <td className="px-4 py-3 text-right font-mono text-xs font-black">
+                       {yoyTotal !== null ? (
+                         <span className={yoyTotal >= 0 ? 'text-emerald-500' : 'text-red-500'}>
+                           {yoyTotal > 0 ? '+' : ''}{yoyTotal.toFixed(1)}%
+                         </span>
+                       ) : '-'}
+                     </td>
+                   );
+                 })()}
+               </tr>
             </tbody>
           </table>
         </div>
